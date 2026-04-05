@@ -8,9 +8,12 @@ const DEFAULT_PORT = 4000;
 const MAX_PORT_RETRIES = 5;
 
 const PORT = parseInt(process.env.PORT || DEFAULT_PORT, 10);
-const MONGODB_URI =
-  process.env.MONGODB_URI ||
-  'mongodb+srv://ERPCHA:ERPCHA@basededatos1.hwq53bl.mongodb.net/?retryWrites=true&w=majority&appName=Basededatos1';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error('Error: MONGODB_URI no está definida en el archivo .env');
+  process.exit(1);
+}
 
 async function listenWithRetry(app, port, attempt = 0) {
   return new Promise((resolve, reject) => {
@@ -33,15 +36,13 @@ async function listenWithRetry(app, port, attempt = 0) {
 
 async function start() {
   try {
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(MONGODB_URI);
     console.log('MongoDB connection established');
 
     const server = await listenWithRetry(app, PORT);
     const addressInfo = server.address();
     const activePort = typeof addressInfo === 'string' ? PORT : addressInfo.port;
+
     console.log(`Server running on port ${activePort}`);
   } catch (error) {
     console.error('Failed to start server', error);
