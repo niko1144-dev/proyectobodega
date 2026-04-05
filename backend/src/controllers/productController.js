@@ -3,6 +3,8 @@ const Product = require('../models/Product');
 const Assignment = require('../models/Assignment');
 const DispatchGuide = require('../models/DispatchGuide');
 const ProductModel = require('../models/ProductModel');
+const InventoryFacade = require('../services/inventoryFacade');
+const { ProductFactory } = require('../services/productFactory');
 
 const ALLOWED_STATUSES = ['AVAILABLE', 'ASSIGNED', 'DECOMMISSIONED'];
 
@@ -83,18 +85,17 @@ exports.createProduct = async (req, res) => {
       return res.status(404).json({ message: 'Guía de despacho no encontrada.' });
     }
 
-    const product = await Product.create({
-      productModel: productModel._id,
-      name: productModel.name,
-      description: productModel.description,
+    const productData = ProductFactory.create({
+      productModel,
       type,
       serialNumber,
-      partNumber: productModel.partNumber,
-      inventoryNumber: type === 'PURCHASED' ? inventoryNumber || null : undefined,
-      rentalId: type === 'RENTAL' ? rentalId : undefined,
-      dispatchGuide: dispatchGuide._id,
+      inventoryNumber,
+      rentalId,
+      dispatchGuideId: dispatchGuide._id,
       createdBy: req.user._id,
     });
+
+    const product = await Product.create(productData);
 
     const populated = await product.populate('productModel');
 
@@ -245,39 +246,17 @@ exports.assignProduct = async (req, res) => {
       });
     }
 
-    const assignment = await Assignment.create({
-      product: product._id,
-      action: 'ASSIGN',
+    const result = await InventoryFacade.assignProduct({
+      product,
       assignedTo: sanitizedAssignedTo,
       assignedEmail: sanitizedAssignedEmail,
       location: sanitizedLocation,
       assignmentDate: effectiveAssignmentDate,
-      performedBy: req.user._id,
       notes,
+      performedBy: req.user._id,
     });
 
-    await assignment.populate('performedBy', 'name email role');
-
-    product.currentAssignment = {
-      assignedTo: sanitizedAssignedTo,
-      assignedEmail: sanitizedAssignedEmail,
-      location: sanitizedLocation,
-      assignmentDate: effectiveAssignmentDate,
-    };
-
-    product.status = 'ASSIGNED';
-    product.decommissionReason = undefined;
-    product.decommissionedAt = undefined;
-    product.decommissionedBy = undefined;
-
-    await product.save();
-
-    const updatedProduct = await product.populate([
-      { path: 'dispatchGuide' },
-      { path: 'productModel' },
-    ]);
-
-    res.json({ product: updatedProduct, assignment });
+    res.json(result);
   } catch (error) {
     console.error('assignProduct error', error);
     res.status(500).json({ message: 'No se pudo asignar el producto.' });
@@ -308,29 +287,15 @@ exports.unassignProduct = async (req, res) => {
 
     const effectiveAssignmentDate = assignmentDate ? new Date(assignmentDate) : new Date();
 
-    const assignment = await Assignment.create({
-      product: product._id,
-      action: 'UNASSIGN',
-      assignedTo: product.currentAssignment.assignedTo,
-      assignedEmail: product.currentAssignment.assignedEmail,
-      location: sanitizedLocation || product.currentAssignment.location,
+    const result = await InventoryFacade.unassignProduct({
+      product,
+      location: sanitizedLocation,
       assignmentDate: effectiveAssignmentDate,
-      performedBy: req.user._id,
       notes,
+      performedBy: req.user._id,
     });
 
-    await assignment.populate('performedBy', 'name email role');
-
-    product.currentAssignment = undefined;
-    product.status = 'AVAILABLE';
-    await product.save();
-
-    const updatedProduct = await product.populate([
-      { path: 'dispatchGuide' },
-      { path: 'productModel' },
-    ]);
-
-    res.json({ product: updatedProduct, assignment });
+    res.json(result);
   } catch (error) {
     console.error('unassignProduct error', error);
     res.status(500).json({ message: 'No se pudo desasignar el producto.' });
@@ -364,18 +329,11 @@ exports.decommissionProduct = async (req, res) => {
         .json({ message: 'Debes liberar la asignación antes de dar de baja el producto.' });
     }
 
-    product.currentAssignment = undefined;
-    product.status = 'DECOMMISSIONED';
-    product.decommissionReason = reason.trim();
-    product.decommissionedAt = new Date();
-    product.decommissionedBy = req.user._id;
-
-    await product.save();
-
-    const populated = await product.populate([
-      { path: 'dispatchGuide' },
-      { path: 'decommissionedBy', select: 'name email role' },
-    ]);
+    const populated = await InventoryFacade.decommissionProduct({
+      product,
+      reason: reason.trim(),
+      userId: req.user._id,
+    });
 
     res.json(populated);
   } catch (error) {
