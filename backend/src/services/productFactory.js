@@ -3,34 +3,82 @@ const PRODUCT_TYPES = {
   RENTAL: 'RENTAL',
 };
 
-class ProductFactory {
-  static create({ productModel, type, serialNumber, inventoryNumber, rentalId, dispatchGuideId, createdBy }) {
-    const baseData = {
-      productModel: productModel._id,
-      name: productModel.name,
-      description: productModel.description,
-      partNumber: productModel.partNumber,
+class BaseProductCreator {
+  constructor({ productModel, serialNumber, dispatchGuideId, createdBy }) {
+    this.productModel = productModel;
+    this.serialNumber = serialNumber;
+    this.dispatchGuideId = dispatchGuideId;
+    this.createdBy = createdBy;
+  }
+
+  buildBaseData(type) {
+    return {
+      productModel: this.productModel._id,
+      name: this.productModel.name,
+      description: this.productModel.description,
+      partNumber: this.productModel.partNumber,
       type,
-      serialNumber,
-      dispatchGuide: dispatchGuideId,
-      createdBy,
+      serialNumber: this.serialNumber,
+      dispatchGuide: this.dispatchGuideId,
+      createdBy: this.createdBy,
     };
+  }
 
-    if (type === PRODUCT_TYPES.PURCHASED) {
-      return {
-        ...baseData,
-        inventoryNumber: inventoryNumber || null,
-      };
+  create() {
+    throw new Error('El creador concreto debe implementar create().');
+  }
+}
+
+class PurchasedProductCreator extends BaseProductCreator {
+  constructor(params) {
+    super(params);
+    this.inventoryNumber = params.inventoryNumber;
+  }
+
+  create() {
+    return {
+      ...this.buildBaseData(PRODUCT_TYPES.PURCHASED),
+      inventoryNumber: this.inventoryNumber || null,
+    };
+  }
+}
+
+class RentalProductCreator extends BaseProductCreator {
+  constructor(params) {
+    super(params);
+    this.rentalId = params.rentalId;
+  }
+
+  create() {
+    if (!this.rentalId) {
+      throw new Error('Los productos de arriendo requieren un ID de arriendo.');
     }
 
-    if (type === PRODUCT_TYPES.RENTAL) {
-      return {
-        ...baseData,
-        rentalId,
-      };
+    return {
+      ...this.buildBaseData(PRODUCT_TYPES.RENTAL),
+      rentalId: this.rentalId,
+    };
+  }
+}
+
+class ProductFactory {
+  static creators = {
+    [PRODUCT_TYPES.PURCHASED]: PurchasedProductCreator,
+    [PRODUCT_TYPES.RENTAL]: RentalProductCreator,
+  };
+
+  static isSupportedType(type) {
+    return Boolean(ProductFactory.creators[type]);
+  }
+
+  static create(params) {
+    const Creator = ProductFactory.creators[params.type];
+
+    if (!Creator) {
+      throw new Error(`Tipo de producto no soportado: ${params.type}`);
     }
 
-    throw new Error(`Tipo de producto no soportado: ${type}`);
+    return new Creator(params).create();
   }
 }
 

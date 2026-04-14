@@ -5,6 +5,7 @@ const DispatchGuide = require('../models/DispatchGuide');
 const ProductModel = require('../models/ProductModel');
 const InventoryFacade = require('../services/inventoryFacade');
 const { ProductFactory } = require('../services/productFactory');
+const { getProductState } = require('../services/productState');
 
 const ALLOWED_STATUSES = ['AVAILABLE', 'ASSIGNED', 'DECOMMISSIONED'];
 
@@ -59,7 +60,7 @@ exports.createProduct = async (req, res) => {
       return res.status(404).json({ message: 'Modelo de producto no encontrado.' });
     }
 
-    if (!['PURCHASED', 'RENTAL'].includes(type)) {
+    if (!ProductFactory.isSupportedType(type)) {
       return res.status(400).json({ message: 'Tipo de producto inválido.' });
     }
 
@@ -234,17 +235,15 @@ exports.assignProduct = async (req, res) => {
       return res.status(404).json({ message: 'Producto no encontrado.' });
     }
 
-    if (product.status === 'DECOMMISSIONED') {
-      return res.status(400).json({ message: 'El producto está dado de baja y no puede asignarse.' });
-    }
+    const state = getProductState(product);
 
-    const effectiveAssignmentDate = assignmentDate ? new Date(assignmentDate) : new Date();
-
-    if (product.status !== 'AVAILABLE' || product.currentAssignment) {
+    if (!state.canAssign() || product.currentAssignment) {
       return res.status(400).json({
         message: 'Debes liberar el producto antes de asignarlo a otra persona.',
       });
     }
+
+    const effectiveAssignmentDate = assignmentDate ? new Date(assignmentDate) : new Date();
 
     const result = await InventoryFacade.assignProduct({
       product,
@@ -277,11 +276,9 @@ exports.unassignProduct = async (req, res) => {
       return res.status(404).json({ message: 'Producto no encontrado.' });
     }
 
-    if (product.status === 'DECOMMISSIONED') {
-      return res.status(400).json({ message: 'El producto se encuentra dado de baja.' });
-    }
+    const state = getProductState(product);
 
-    if (!product.currentAssignment) {
+    if (!state.canUnassign() || !product.currentAssignment) {
       return res.status(400).json({ message: 'El producto no tiene una asignación activa.' });
     }
 
@@ -319,7 +316,9 @@ exports.decommissionProduct = async (req, res) => {
       return res.status(404).json({ message: 'Producto no encontrado.' });
     }
 
-    if (product.status === 'DECOMMISSIONED') {
+    const state = getProductState(product);
+
+    if (!state.canDecommission()) {
       return res.status(400).json({ message: 'El producto ya se encuentra dado de baja.' });
     }
 
