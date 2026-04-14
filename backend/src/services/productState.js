@@ -10,9 +10,29 @@ class ProductState {
   decommission() {
     throw new Error('Operación decommission no soportada para este estado.');
   }
+
+  canAssign() {
+    return false;
+  }
+
+  canUnassign() {
+    return false;
+  }
+
+  canDecommission() {
+    return false;
+  }
 }
 
 class AvailableState extends ProductState {
+  canAssign() {
+    return true;
+  }
+
+  canDecommission() {
+    return true;
+  }
+
   assign(product, assignmentSnapshot) {
     product.currentAssignment = assignmentSnapshot;
     product.status = 'ASSIGNED';
@@ -31,6 +51,14 @@ class AvailableState extends ProductState {
 }
 
 class AssignedState extends ProductState {
+  canUnassign() {
+    return true;
+  }
+
+  canDecommission() {
+    return true;
+  }
+
   unassign(product) {
     product.currentAssignment = undefined;
     product.status = 'AVAILABLE';
@@ -39,17 +67,20 @@ class AssignedState extends ProductState {
 
 class DecommissionedState extends ProductState {}
 
+const stateRegistry = {
+  AVAILABLE: AvailableState,
+  ASSIGNED: AssignedState,
+  DECOMMISSIONED: DecommissionedState,
+};
+
 function getProductState(product) {
-  switch (product.status) {
-    case 'AVAILABLE':
-      return new AvailableState();
-    case 'ASSIGNED':
-      return new AssignedState();
-    case 'DECOMMISSIONED':
-      return new DecommissionedState();
-    default:
-      throw new Error(`Estado de producto desconocido: ${product.status}`);
+  const StateClass = stateRegistry[product.status];
+
+  if (!StateClass) {
+    throw new Error(`Estado de producto desconocido: ${product.status}`);
   }
+
+  return new StateClass();
 }
 
 module.exports = {
