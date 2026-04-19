@@ -4,8 +4,9 @@ const Assignment = require('../models/Assignment');
 const DispatchGuide = require('../models/DispatchGuide');
 const ProductModel = require('../models/ProductModel');
 const InventoryFacade = require('../services/inventoryFacade');
-const { ProductFactory } = require('../services/productFactory');
 const { getProductState } = require('../services/productState');
+const productService = require('../services/productService');
+const { validateCreateProductInput, validateAssignProductInput } = require('../validators/productValidator');
 
 const ALLOWED_STATUSES = ['AVAILABLE', 'ASSIGNED', 'DECOMMISSIONED'];
 
@@ -45,64 +46,15 @@ function buildSearchQuery({ type, status, search }) {
 
 exports.createProduct = async (req, res) => {
   try {
-    const { productModelId, type, serialNumber, inventoryNumber, rentalId, dispatchGuideId } = req.body;
-
-    if (!productModelId || !type || !serialNumber) {
-      return res.status(400).json({ message: 'Modelo de producto, tipo y número de serie son obligatorios.' });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(productModelId)) {
-      return res.status(400).json({ message: 'Identificador de modelo de producto inválido.' });
-    }
-
-    const productModel = await ProductModel.findById(productModelId);
-    if (!productModel) {
-      return res.status(404).json({ message: 'Modelo de producto no encontrado.' });
-    }
-
-    if (!ProductFactory.isSupportedType(type)) {
-      return res.status(400).json({ message: 'Tipo de producto inválido.' });
-    }
-
-    if (type === 'RENTAL' && !rentalId) {
-      return res.status(400).json({ message: 'Los productos de arriendo requieren un ID de arriendo.' });
-    }
-
-    if (!dispatchGuideId) {
-      return res.status(400).json({ message: 'Debes asociar el producto a una guía de despacho.' });
-    }
-
-    if (type === 'PURCHASED' && !inventoryNumber) {
-      // El inventario es opcional, pero avisamos si falta.
-      console.warn('Producto de compra sin número de inventario, se almacenará vacío.');
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(dispatchGuideId)) {
-      return res.status(400).json({ message: 'Identificador de guía de despacho inválido.' });
-    }
-
-    const dispatchGuide = await DispatchGuide.findById(dispatchGuideId);
-    if (!dispatchGuide) {
-      return res.status(404).json({ message: 'Guía de despacho no encontrada.' });
-    }
-
-    const productData = ProductFactory.create({
-      productModel,
-      type,
-      serialNumber,
-      inventoryNumber,
-      rentalId,
-      dispatchGuideId: dispatchGuide._id,
-      createdBy: req.user._id,
-    });
-
-    const product = await Product.create(productData);
-
-    const populated = await product.populate('productModel');
-
-    res.status(201).json(populated);
+    // Controlador: solo coordina validator + service y devuelve respuesta HTTP.
+    const validatedPayload = validateCreateProductInput(req.body);
+    const product = await productService.createProduct(validatedPayload, req.user._id);
+    res.status(201).json(product);
   } catch (error) {
     console.error('createProduct error', error);
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
     res.status(500).json({ message: 'No se pudo crear el producto.' });
   }
 };
@@ -214,50 +166,15 @@ exports.updateProduct = async (req, res) => {
 
 exports.assignProduct = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Identificador inválido.' });
-    }
-
-    const { assignedTo, assignedEmail, location, assignmentDate, notes } = req.body;
-
-    const sanitizedAssignedTo = typeof assignedTo === 'string' ? assignedTo.trim() : '';
-    const sanitizedAssignedEmail = typeof assignedEmail === 'string' ? assignedEmail.trim() : '';
-    const sanitizedLocation = typeof location === 'string' ? location.trim() : '';
-
-    if (!sanitizedAssignedTo || !sanitizedAssignedEmail || !sanitizedLocation) {
-      return res
-        .status(400)
-        .json({ message: 'Usuario, correo electrónico y ubicación son obligatorios.' });
-    }
-
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: 'Producto no encontrado.' });
-    }
-
-    const state = getProductState(product);
-
-    if (!state.canAssign() || product.currentAssignment) {
-      return res.status(400).json({
-        message: 'Debes liberar el producto antes de asignarlo a otra persona.',
-      });
-    }
-
-    const effectiveAssignmentDate = assignmentDate ? new Date(assignmentDate) : new Date();
-
-    const result = await InventoryFacade.assignProduct({
-      product,
-      assignedTo: sanitizedAssignedTo,
-      assignedEmail: sanitizedAssignedEmail,
-      location: sanitizedLocation,
-      assignmentDate: effectiveAssignmentDate,
-      notes,
-      performedBy: req.user._id,
-    });
-
+    // Controlador: delega validación y reglas de negocio para mantener baja complejidad.
+    const validatedPayload = validateAssignProductInput(req.params.id, req.body);
+    const result = await productService.assignProduct(req.params.id, validatedPayload, req.user._id);
     res.json(result);
   } catch (error) {
     console.error('assignProduct error', error);
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
     res.status(500).json({ message: 'No se pudo asignar el producto.' });
   }
 };
