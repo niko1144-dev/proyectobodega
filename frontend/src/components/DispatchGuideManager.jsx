@@ -116,15 +116,15 @@ function DispatchGuideManager({
             )}
             {guides.map((guide) => (
               <tr key={guide._id}>
-                <td>{guide.guideNumber}</td>
-                <td>{guide.vendor}</td>
-                <td>{new Date(guide.dispatchDate).toLocaleDateString('es-CL')}</td>
-                <td>
+                <td data-label="N° guía">{guide.guideNumber}</td>
+                <td data-label="Proveedor">{guide.vendor}</td>
+                <td data-label="Fecha">{new Date(guide.dispatchDate).toLocaleDateString('es-CL')}</td>
+                <td data-label="Archivo">
                   <button type="button" className="link" onClick={() => onDownload(guide)}>
                     Descargar
                   </button>
                 </td>
-                <td>
+                <td data-label="Acciones">
                   <button
                     type="button"
                     className="danger compact"

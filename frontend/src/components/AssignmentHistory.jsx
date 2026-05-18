@@ -34,17 +34,17 @@ function AssignmentHistory({ history, loading }) {
             )}
             {history.map((item) => (
               <tr key={item._id}>
-                <td>
+                <td data-label="Acción">
                   <span className={item.action === 'ASSIGN' ? 'status info' : 'status warning'}>
                     {item.action === 'ASSIGN' ? 'Asignación' : 'Liberación'}
                   </span>
                 </td>
-                <td>{item.assignedTo}</td>
-                <td>{item.assignedEmail || '—'}</td>
-                <td>{item.location}</td>
-                <td>{new Date(item.assignmentDate).toLocaleString('es-CL')}</td>
-                <td>{item.performedBy?.name || '—'}</td>
-                <td>{item.notes || '—'}</td>
+                <td data-label="Usuario asignado">{item.assignedTo}</td>
+                <td data-label="Correo electrónico">{item.assignedEmail || '—'}</td>
+                <td data-label="Ubicación">{item.location}</td>
+                <td data-label="Fecha">{new Date(item.assignmentDate).toLocaleString('es-CL')}</td>
+                <td data-label="Registrado por">{item.performedBy?.name || '—'}</td>
+                <td data-label="Notas">{item.notes || '—'}</td>
               </tr>
             ))}
           </tbody>

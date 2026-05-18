@@ -109,17 +109,17 @@ function StockConsultPage() {
               )}
               {filteredSummary.map((item) => (
                 <tr key={`${item.productModelId || 'sin-modelo'}-${item.partNumber || 'sin-parte'}`}>
-                  <td>
+                  <td data-label="Producto">
                     <strong>{item.name}</strong>
                     {item.description && <div className="muted small-text">{item.description}</div>}
                   </td>
-                  <td>{item.partNumber || '—'}</td>
-                  <td>{item.totals.total}</td>
-                  <td>{item.totals.available}</td>
-                  <td>{item.totals.assigned}</td>
-                  <td>{item.totals.decommissioned}</td>
-                  <td>{item.typeBreakdown.purchased}</td>
-                  <td>{item.typeBreakdown.rental}</td>
+                  <td data-label="N° de parte">{item.partNumber || '—'}</td>
+                  <td data-label="Total">{item.totals.total}</td>
+                  <td data-label="Disponibles">{item.totals.available}</td>
+                  <td data-label="Asignados">{item.totals.assigned}</td>
+                  <td data-label="Dados de baja">{item.totals.decommissioned}</td>
+                  <td data-label="Compras">{item.typeBreakdown.purchased}</td>
+                  <td data-label="Arriendos">{item.typeBreakdown.rental}</td>
                 </tr>
               ))}
             </tbody>

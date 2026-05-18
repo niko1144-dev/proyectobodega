@@ -274,11 +274,11 @@ function ProductCatalogPage() {
                 )}
                 {filteredModels.map((model) => (
                   <tr key={model._id}>
-                    <td>{model.name}</td>
-                    <td>{model.partNumber}</td>
-                    <td>{model.description || '—'}</td>
-                    <td>{new Date(model.createdAt).toLocaleDateString('es-CL')}</td>
-                    <td>
+                    <td data-label="Nombre">{model.name}</td>
+                    <td data-label="N° de parte">{model.partNumber}</td>
+                    <td data-label="Descripción">{model.description || '—'}</td>
+                    <td data-label="Creado">{new Date(model.createdAt).toLocaleDateString('es-CL')}</td>
+                    <td data-label="Acciones">
                       <button
                         type="button"
                         className="danger compact"

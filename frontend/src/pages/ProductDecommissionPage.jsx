@@ -250,10 +250,10 @@ function ProductDecommissionPage() {
               )}
               {filteredDecommissionedProducts.map((product) => (
                 <tr key={product._id}>
-                  <td>{product.name}</td>
-                  <td>{product.serialNumber}</td>
-                  <td>{product.decommissionReason || '—'}</td>
-                  <td>
+                  <td data-label="Producto">{product.name}</td>
+                  <td data-label="N° serie">{product.serialNumber}</td>
+                  <td data-label="Motivo">{product.decommissionReason || '—'}</td>
+                  <td data-label="Registrado">
                     {product.decommissionedAt
                       ? new Date(product.decommissionedAt).toLocaleString('es-CL')
                       : '—'}

@@ -51,17 +51,17 @@ function ProductTable({ products, onSelect, selectedProductId, isFiltered = fals
                   className={isSelected ? 'selected' : ''}
                   onClick={() => onSelect(product._id)}
                 >
-                  <td>{productName}</td>
-                  <td>{formatType(product.type)}</td>
-                  <td>{product.serialNumber}</td>
-                  <td>{productPartNumber}</td>
-                  <td>
+                  <td data-label="Nombre">{productName}</td>
+                  <td data-label="Tipo">{formatType(product.type)}</td>
+                  <td data-label="N° serie">{product.serialNumber}</td>
+                  <td data-label="N° parte">{productPartNumber}</td>
+                  <td data-label="Inventario / ID">
                     {product.type === 'PURCHASED'
                       ? product.inventoryNumber || '—'
                       : product.rentalId}
                   </td>
-                  <td>{product.dispatchGuide?.guideNumber || '—'}</td>
-                  <td>
+                  <td data-label="Guía">{product.dispatchGuide?.guideNumber || '—'}</td>
+                  <td data-label="Estado">
                     <span className={getProductStatusBadge(product.status)}>
                       {getProductStatusLabel(product.status)}
                     </span>
@@ -69,7 +69,7 @@ function ProductTable({ products, onSelect, selectedProductId, isFiltered = fals
                       <div className="muted small-text">{product.decommissionReason}</div>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Asignación actual">
                     {product.status === 'ASSIGNED' && product.currentAssignment ? (
                       <div>
                         <div>{product.currentAssignment.assignedTo}</div>

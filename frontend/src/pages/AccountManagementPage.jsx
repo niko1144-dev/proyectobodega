@@ -372,12 +372,12 @@ function AccountManagementPage() {
 
                 return (
                   <tr key={user._id}>
-                    <td>
+                    <td data-label="Nombre">
                       <strong>{user.name}</strong>
                       {isCurrentUser && <div className="muted small-text">Tu cuenta actual</div>}
                     </td>
-                    <td>{user.email}</td>
-                    <td>
+                    <td data-label="Correo">{user.email}</td>
+                    <td data-label="Rol">
                       <select
                         value={roleValue}
                         onChange={(event) =>
@@ -391,7 +391,7 @@ function AccountManagementPage() {
                         ))}
                       </select>
                     </td>
-                    <td>
+                    <td data-label="Cuenta AD">
                       <input
                         value={adAccountValue}
                         onChange={(event) =>
@@ -400,8 +400,8 @@ function AccountManagementPage() {
                         placeholder="Sin cuenta"
                       />
                     </td>
-                    <td>{updatedLabel}</td>
-                    <td>
+                    <td data-label="Actualizado">{updatedLabel}</td>
+                    <td data-label="Acciones">
                       <div className="table-action-buttons">
                         <button
                           type="button"
