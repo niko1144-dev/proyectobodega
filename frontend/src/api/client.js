@@ -15,7 +15,7 @@ function resolveDefaultApiUrl() {
       hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
 
     if (isDevEnvironment) {
-      const devPort = env.VITE_DEV_BACKEND_PORT || '4000';
+      const devPort = env.VITE_DEV_BACKEND_PORT || '3000';
 
       if (!isLocalHostname) {
         return `${normalizedProtocol}//${hostname}:${devPort}/api`;
@@ -27,7 +27,7 @@ function resolveDefaultApiUrl() {
     return `${normalizedProtocol}//${host}/api`;
   }
 
-  return 'http://localhost:4000/api';
+  return 'http://localhost:3000/api';
 }
 
 const rawApiUrl = resolveDefaultApiUrl();

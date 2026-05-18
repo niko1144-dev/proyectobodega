@@ -46,7 +46,6 @@ function buildSearchQuery({ type, status, search }) {
 
 exports.createProduct = async (req, res) => {
   try {
-    // Controlador: solo coordina validator + service y devuelve respuesta HTTP.
     const validatedPayload = validateCreateProductInput(req.body);
     const product = await productService.createProduct(validatedPayload, req.user._id);
     res.status(201).json(product);

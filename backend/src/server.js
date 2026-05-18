@@ -4,7 +4,7 @@ const app = require('./app');
 
 dotenv.config();
 
-const DEFAULT_PORT = 4000;
+const DEFAULT_PORT = 3000;
 const MAX_PORT_RETRIES = 5;
 
 const PORT = parseInt(process.env.PORT || DEFAULT_PORT, 10);
