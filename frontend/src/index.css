@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #F4F6F8;
+    color: #1E293B;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+/* Identidad Visual Oficial Gobierno de Chile / ChileAtiende */
+:root {
+  --gob-blue: #003B70;
+  --gob-red: #E4002B;
+  --gob-light-blue: #EBF3FA;
+  --gob-border: #D1D5DB;
+  --gob-text-main: #1E293B;
+  --gob-text-secondary: #64748B;
+  --gob-success: #10B981;
+  --gob-warning: #F59E0B;
+}
+
+/* Franja Bicromática Institucional */
+.gob-flag-bar {
+  display: flex;
+  height: 4px;
+  width: 100%;
+}
+.gob-flag-bar::before {
+  content: '';
+  flex: 1;
+  background-color: #003B70;
+}
+.gob-flag-bar::after {
+  content: '';
+  flex: 1;
+  background-color: #E4002B;
+}
+
+/* Tarjetas y Contenedores */
+.gov-card {
+  @apply bg-white rounded-xl border border-slate-200 shadow-sm;
+}
+
+/* Tablas Estandarizadas */
+.gov-table {
+  @apply w-full text-left text-sm border-collapse;
+}
+.gov-table th {
+  @apply px-4 py-3 bg-slate-50 text-slate-700 font-bold border-b border-slate-200;
+}
+.gov-table td {
+  @apply px-4 py-3.5 border-b border-slate-100 text-slate-600;
+}
+.gov-table tr:hover td {
+  @apply bg-slate-50/60;
+}
+
+/* Scrollbar Personalizada */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Inputs y Selects Estandarizados */
+.gov-input {
+  @apply w-full px-3.5 py-2.5 min-h-[40px] bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-[#003B70] focus:ring-2 focus:ring-[#003B70]/20 transition-all font-normal;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Corrección de desborde responsivo en móviles para inputs tipo fecha */
+input[type="date"].gov-input,
+input[type="date"] {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+.gov-input-with-icon,
+.gov-input.pl-9,
+.gov-input.pl-10,
+.gov-input.pl-11 {
+  padding-left: 2.75rem !important; /* 44px para separación perfecta del icono izquierdo */
+}
+
+.gov-input-with-both-icons,
+.gov-input.pl-10.pr-10,
+.gov-input.pl-9.pr-10 {
+  padding-left: 2.75rem !important;
+  padding-right: 2.75rem !important; /* Separación para icono de ojo/derecho */
+}
+
+/* Botones Estandarizados */
+.gov-btn-primary {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-bold text-white bg-[#003B70] hover:bg-[#002A50] rounded-lg shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.gov-btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.gov-btn-danger {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-bold text-white bg-[#E4002B] hover:bg-[#C20024] rounded-lg shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+}

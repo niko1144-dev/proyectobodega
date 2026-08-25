@@ -1,0 +1,512 @@
+import { Router, Request, Response } from 'express';
+import { prisma } from '../config/db.js';
+import { AssignmentStatus, AssignmentType, AssetStatus, PhysicalCondition, StockMovementType } from '@prisma/client';
+
+export const assignmentRouter = Router();
+
+// Listar todas las asignaciones
+assignmentRouter.get('/', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const assignments = await prisma.assignment.findMany({
+      include: {
+        recipientUser: true,
+        technicianUser: true,
+        branch: true,
+        items: {
+          include: {
+            asset: { include: { assetType: true } },
+            consumable: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const formatted = assignments.map(a => ({
+      id: a.id,
+      actNumber: a.actNumber,
+      assignmentType: a.assignmentType,
+      recipientUserId: a.recipientUserId,
+      recipientName: a.recipientUser?.fullName || 'Funcionario',
+      recipientRut: a.recipientUser?.rut || '',
+      recipientEmail: a.recipientUser?.email || '',
+      recipientJobTitle: a.recipientUser?.jobTitle || 'Funcionario',
+      recipientDepartment: a.recipientUser?.department || 'ChileAtiende',
+      recipientBranchName: a.branch?.name || 'Sucursal',
+      technicianUserId: a.technicianUserId,
+      technicianName: a.technicianUser?.fullName || 'Técnico DTI',
+      technicianRut: a.technicianUser?.rut || '',
+      branchId: a.branchId,
+      branchName: a.branch?.name || 'Sucursal',
+      status: a.status,
+      actDocumentUrl: a.actDocumentUrl || undefined,
+      signatureDataUrl: a.signatureDataUrl || undefined,
+      signedByName: a.signedByName || undefined,
+      digitalSignatureHash: a.digitalSignatureHash || undefined,
+      observations: a.observations || undefined,
+      createdAt: a.createdAt.toISOString(),
+      signedAt: a.signedAt ? a.signedAt.toISOString() : undefined,
+      returnedAt: a.returnedAt ? a.returnedAt.toISOString() : undefined,
+      items: a.items.map(i => ({
+        id: i.id,
+        assignmentId: i.assignmentId,
+        assetId: i.assetId || undefined,
+        serialNumber: i.asset?.serialNumber,
+        inventoryNumber: i.asset?.inventoryNumber || undefined,
+        brand: i.asset?.brand,
+        model: i.asset?.model,
+        assetTypeName: i.asset?.assetType?.name,
+        propertyType: i.asset?.propertyType,
+        conditionAtAssignment: i.conditionAtAssignment,
+        consumableId: i.consumableId || undefined,
+        consumableSku: i.consumable?.sku,
+        consumableName: i.consumable?.name,
+        quantity: i.quantity,
+        isReturned: i.isReturned,
+        returnedAt: i.returnedAt ? i.returnedAt.toISOString() : undefined,
+        conditionAtReturn: i.conditionAtReturn || undefined,
+        returnNotes: i.returnNotes || undefined
+      }))
+    }));
+
+    res.json(formatted);
+  } catch (error: any) {
+    console.error('Error fetching assignments:', error);
+    res.status(500).json({ error: 'Error al consultar asignaciones', details: error.message });
+  }
+});
+
+// Crear Asignación y Acta Oficial en PostgreSQL (Transaccional)
+assignmentRouter.post('/', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      actNumber,
+      assignmentType,
+      recipientUserId,
+      technicianUserId,
+      branchId,
+      items,
+      observations,
+      signatureDataUrl,
+      digitalSignatureHash,
+      recipientRut,
+      recipientName,
+      recipientEmail,
+      recipientJobTitle,
+      recipientDepartment,
+      technicianName,
+      technicianRut,
+      branchName
+    } = req.body;
+
+    if (!items || items.length === 0) {
+      res.status(400).json({ error: 'Debe incluir al menos un ítem para asignar' });
+      return;
+    }
+
+    // 1. Resolver o Registrar Funcionario Receptor en UserADCache
+    let recipient = await prisma.userADCache.findFirst({
+      where: {
+        OR: [
+          ...(recipientUserId ? [{ id: recipientUserId }] : []),
+          ...(recipientRut ? [{ rut: recipientRut }] : []),
+          ...(recipientEmail ? [{ email: recipientEmail }] : [])
+        ]
+      }
+    });
+
+    if (!recipient) {
+      const recRut = recipientRut || `11.111.111-1`;
+      const recName = recipientName || 'Funcionario ChileAtiende';
+      recipient = await prisma.userADCache.create({
+        data: {
+          id: recipientUserId || `usr-ad-${Date.now()}`,
+          adGuid: `guid-ad-${Date.now()}`,
+          samAccountName: (recipientEmail ? recipientEmail.split('@')[0] : `user.${Date.now()}`),
+          rut: recRut,
+          firstName: recName.split(' ')[0],
+          lastName: recName.split(' ').slice(1).join(' ') || 'IPS',
+          fullName: recName,
+          email: recipientEmail || `funcionario.${Date.now()}@chileatiende.cl`,
+          jobTitle: recipientJobTitle || 'Funcionario',
+          department: recipientDepartment || 'ChileAtiende',
+          branchId: branchId || undefined
+        }
+      });
+    }
+
+    // 2. Resolver o Registrar Técnico Operador en UserADCache (Garantizar FK)
+    let technician = await prisma.userADCache.findFirst({
+      where: {
+        OR: [
+          ...(technicianUserId ? [{ id: technicianUserId }] : []),
+          ...(technicianRut ? [{ rut: technicianRut }] : [])
+        ]
+      }
+    });
+
+    if (!technician) {
+      const techRut = technicianRut || '15.987.654-3';
+      const techFull = technicianName || 'Técnico Soporte DTI';
+
+      // Verificar si existe por RUT en UserADCache
+      const existingTechByRut = await prisma.userADCache.findUnique({ where: { rut: techRut } });
+      if (existingTechByRut) {
+        technician = existingTechByRut;
+      } else {
+        technician = await prisma.userADCache.create({
+          data: {
+            id: technicianUserId || `tech-ad-${Date.now()}`,
+            adGuid: `guid-tech-${Date.now()}`,
+            samAccountName: `tech.${Date.now()}`,
+            rut: techRut,
+            firstName: techFull.split(' ')[0],
+            lastName: techFull.split(' ').slice(1).join(' ') || 'Soporte',
+            fullName: techFull,
+            email: `${techRut}@chileatiende.cl`,
+            jobTitle: 'Técnico Soporte DTI',
+            department: 'División de Tecnologías de la Información',
+            branchId: branchId || undefined,
+            role: 'TECNICO'
+          }
+        });
+      }
+    }
+
+    // 3. Resolver Sucursal
+    let branch = await prisma.branch.findFirst({
+      where: {
+        OR: [
+          ...(branchId && branchId !== 'ALL' ? [{ id: branchId }] : []),
+          ...(branchName ? [{ name: branchName }] : [])
+        ]
+      }
+    });
+
+    if (!branch) {
+      branch = await prisma.branch.findFirst();
+      if (!branch) {
+        res.status(404).json({ error: 'No se encontraron sucursales registradas' });
+        return;
+      }
+    }
+
+    const generatedActNumber = actNumber || `ACT-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+    const now = new Date();
+
+    const createdAssignment = await prisma.$transaction(async (tx) => {
+      // A. Crear Cabecera del Acta
+      const assignment = await tx.assignment.create({
+        data: {
+          actNumber: generatedActNumber,
+          assignmentType: (assignmentType as AssignmentType) || AssignmentType.ENTREGA_INICIAL,
+          recipientUserId: recipient.id,
+          technicianUserId: technician.id,
+          branchId: branch.id,
+          status: signatureDataUrl ? AssignmentStatus.FIRMADO_DIGITAL : AssignmentStatus.PENDIENTE_FIRMA,
+          signatureDataUrl: signatureDataUrl || null,
+          signedByName: signatureDataUrl ? recipient.fullName : null,
+          digitalSignatureHash: digitalSignatureHash || null,
+          observations: observations || null,
+          signedAt: signatureDataUrl ? now : null
+        }
+      });
+
+      // B. Procesar cada ítem asignado
+      for (const item of items) {
+        if (item.assetId || item.serialNumber) {
+          // Buscar activo por ID o por N° de Serie
+          const asset = await tx.asset.findFirst({
+            where: {
+              OR: [
+                ...(item.assetId ? [{ id: item.assetId }] : []),
+                ...(item.serialNumber ? [{ serialNumber: item.serialNumber }] : [])
+              ]
+            }
+          });
+
+          if (asset) {
+            // Cambiar estado a ASIGNADO con asignación del funcionario
+            await tx.asset.update({
+              where: { id: asset.id },
+              data: {
+                status: AssetStatus.ASIGNADO,
+                assignedToUserId: recipient.id,
+                assignedToUserName: recipient.fullName,
+                assignedToUserRut: recipient.rut,
+                assignedToUserDept: recipient.department,
+                assignedDate: now,
+                updatedAt: now
+              }
+            });
+
+            // Registrar ítem del acta
+            await tx.assignmentItem.create({
+              data: {
+                assignmentId: assignment.id,
+                assetId: asset.id,
+                quantity: 1,
+                conditionAtAssignment: item.conditionAtAssignment || asset.physicalCondition || PhysicalCondition.BUENO
+              }
+            });
+
+            // Registrar Log de Auditoría inmutable
+            await tx.assetAuditLog.create({
+              data: {
+                assetId: asset.id,
+                serialNumber: asset.serialNumber,
+                inventoryNumber: asset.inventoryNumber,
+                previousStatus: asset.status,
+                newStatus: AssetStatus.ASIGNADO,
+                newUserId: recipient.id,
+                newUserName: recipient.fullName,
+                branchName: branch.name,
+                changedByUserName: technician.fullName,
+                changeReason: `Asignación a funcionario mediante Acta ${assignment.actNumber}`,
+                documentRef: assignment.actNumber
+              }
+            });
+          }
+        } else if (item.consumableId || item.consumableSku) {
+          // Buscar consumible
+          const consumable = await tx.consumable.findFirst({
+            where: {
+              OR: [
+                ...(item.consumableId ? [{ id: item.consumableId }] : []),
+                ...(item.consumableSku ? [{ sku: item.consumableSku }] : [])
+              ]
+            }
+          });
+
+          if (consumable) {
+            const qtyToDiscount = item.quantity || 1;
+
+            await tx.assignmentItem.create({
+              data: {
+                assignmentId: assignment.id,
+                consumableId: consumable.id,
+                quantity: qtyToDiscount,
+                conditionAtAssignment: PhysicalCondition.NUEVO
+              }
+            });
+
+            // Descontar stock en la bodega de origen
+            const stock = await tx.consumableStock.findFirst({
+              where: { consumableId: consumable.id, branchId: branch.id }
+            });
+
+            const prevQty = stock ? stock.currentQuantity : 0;
+            const newQty = Math.max(0, prevQty - qtyToDiscount);
+
+            if (stock) {
+              await tx.consumableStock.update({
+                where: { id: stock.id },
+                data: { currentQuantity: newQty, lastUpdated: now }
+              });
+            } else {
+              await tx.consumableStock.create({
+                data: {
+                  consumableId: consumable.id,
+                  branchId: branch.id,
+                  currentQuantity: 0,
+                  lastUpdated: now
+                }
+              });
+            }
+
+            // Kardex de movimiento de stock
+            await tx.stockMovement.create({
+              data: {
+                consumableId: consumable.id,
+                branchId: branch.id,
+                movementType: StockMovementType.ENTREGA_FUNCIONARIO,
+                quantity: qtyToDiscount,
+                previousQuantity: prevQty,
+                newQuantity: newQty,
+                assignmentActNumber: assignment.actNumber,
+                recipientUserName: recipient.fullName,
+                registeredByUserId: technician.id,
+                registeredByName: technician.fullName,
+                reason: `Entrega según Acta ${assignment.actNumber}`
+              }
+            });
+          }
+        }
+      }
+
+      return assignment;
+    });
+
+    // Cargar asignación completa con relaciones
+    const fullAssignment = await prisma.assignment.findUnique({
+      where: { id: createdAssignment.id },
+      include: {
+        recipientUser: true,
+        technicianUser: true,
+        branch: true,
+        items: {
+          include: {
+            asset: { include: { assetType: true } },
+            consumable: true
+          }
+        }
+      }
+    });
+
+    const formattedAssignment = {
+      id: fullAssignment!.id,
+      actNumber: fullAssignment!.actNumber,
+      assignmentType: fullAssignment!.assignmentType,
+      recipientUserId: fullAssignment!.recipientUserId,
+      recipientName: fullAssignment!.recipientUser?.fullName || recipient.fullName,
+      recipientRut: fullAssignment!.recipientUser?.rut || recipient.rut,
+      recipientEmail: fullAssignment!.recipientUser?.email || recipient.email,
+      recipientJobTitle: fullAssignment!.recipientUser?.jobTitle || 'Funcionario',
+      recipientDepartment: fullAssignment!.recipientUser?.department || 'ChileAtiende',
+      recipientBranchName: fullAssignment!.branch?.name || branch.name,
+      technicianUserId: fullAssignment!.technicianUserId,
+      technicianName: fullAssignment!.technicianUser?.fullName || technician.fullName,
+      technicianRut: fullAssignment!.technicianUser?.rut || technician.rut,
+      branchId: fullAssignment!.branchId,
+      branchName: fullAssignment!.branch?.name || branch.name,
+      status: fullAssignment!.status,
+      actDocumentUrl: fullAssignment!.actDocumentUrl || undefined,
+      signatureDataUrl: fullAssignment!.signatureDataUrl || undefined,
+      signedByName: fullAssignment!.signedByName || undefined,
+      digitalSignatureHash: fullAssignment!.digitalSignatureHash || undefined,
+      observations: fullAssignment!.observations || undefined,
+      createdAt: fullAssignment!.createdAt.toISOString(),
+      signedAt: fullAssignment!.signedAt ? fullAssignment!.signedAt.toISOString() : undefined,
+      returnedAt: fullAssignment!.returnedAt ? fullAssignment!.returnedAt.toISOString() : undefined,
+      items: fullAssignment!.items.map(i => ({
+        id: i.id,
+        assignmentId: i.assignmentId,
+        assetId: i.assetId || undefined,
+        serialNumber: i.asset?.serialNumber,
+        inventoryNumber: i.asset?.inventoryNumber || undefined,
+        brand: i.asset?.brand,
+        model: i.asset?.model,
+        assetTypeName: i.asset?.assetType?.name,
+        propertyType: i.asset?.propertyType,
+        conditionAtAssignment: i.conditionAtAssignment,
+        consumableId: i.consumableId || undefined,
+        consumableSku: i.consumable?.sku,
+        consumableName: i.consumable?.name,
+        quantity: i.quantity,
+        isReturned: i.isReturned,
+        returnedAt: i.returnedAt ? i.returnedAt.toISOString() : undefined,
+        conditionAtReturn: i.conditionAtReturn || undefined,
+        returnNotes: i.returnNotes || undefined
+      }))
+    };
+
+    res.status(201).json({ success: true, assignment: formattedAssignment });
+  } catch (error: any) {
+    console.error('Error creating assignment:', error);
+    res.status(500).json({ error: 'Error al registrar la asignación', details: error.message });
+  }
+});
+
+// Registrar Retorno / Devolución de Activos
+assignmentRouter.post('/:id/return', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const { returnedItems, returnBranchId, changedByUserName } = req.body;
+
+    const assignment = await prisma.assignment.findFirst({
+      where: {
+        OR: [
+          { id },
+          { actNumber: id }
+        ]
+      },
+      include: { items: { include: { asset: true } }, branch: true }
+    });
+
+    if (!assignment) {
+      res.status(404).json({ error: 'Asignación no encontrada' });
+      return;
+    }
+
+    let targetBranch = assignment.branch;
+    if (returnBranchId && returnBranchId !== 'ALL') {
+      const foundBranch = await prisma.branch.findUnique({ where: { id: returnBranchId } });
+      if (foundBranch) targetBranch = foundBranch;
+    }
+
+    const now = new Date();
+
+    await prisma.$transaction(async (tx) => {
+      for (const ret of returnedItems) {
+        const item = assignment.items.find((i: any) => i.id === ret.itemId || i.assetId === ret.itemId);
+        if (!item || !item.assetId || !item.asset) continue;
+
+        // Actualizar item
+        await tx.assignmentItem.update({
+          where: { id: item.id },
+          data: {
+            isReturned: true,
+            returnedAt: now,
+            conditionAtReturn: (ret.condition as PhysicalCondition) || PhysicalCondition.BUENO,
+            returnNotes: ret.notes || 'Devolución conforme'
+          }
+        });
+
+        // Actualizar activo asignándole la nueva bodega de destino seleccionada
+        const destStatus = (ret.destinationStatus as AssetStatus) || AssetStatus.BODEGA_DISPONIBLE;
+        await tx.asset.update({
+          where: { id: item.assetId },
+          data: {
+            status: destStatus,
+            currentBranchId: targetBranch.id,
+            physicalCondition: (ret.condition as PhysicalCondition) || PhysicalCondition.BUENO,
+            assignedToUserId: null,
+            assignedToUserName: null,
+            assignedToUserRut: null,
+            assignedToUserDept: null,
+            assignedDate: null,
+            updatedAt: now
+          }
+        });
+
+        // Registrar auditoría con la bodega de destino
+        await tx.assetAuditLog.create({
+          data: {
+            assetId: item.asset.id,
+            serialNumber: item.asset.serialNumber,
+            inventoryNumber: item.asset.inventoryNumber,
+            previousStatus: AssetStatus.ASIGNADO,
+            newStatus: destStatus,
+            previousUserName: assignment.recipientUserId,
+            branchName: targetBranch.name,
+            changedByUserName: changedByUserName || 'Técnico Bodega',
+            changeReason: `Devolución Acta ${assignment.actNumber} a bodega ${targetBranch.name}: ${ret.notes || 'Reingreso conforme'}`,
+            documentRef: assignment.actNumber
+          }
+        });
+      }
+
+      // Comprobar si todos los activos fueron devueltos
+      const remaining = await tx.assignmentItem.count({
+        where: { assignmentId: assignment.id, assetId: { not: null }, isReturned: false }
+      });
+
+      await tx.assignment.update({
+        where: { id: assignment.id },
+        data: {
+          status: remaining === 0 ? AssignmentStatus.DEVUELTO_COMPLETO : AssignmentStatus.DEVUELTO_PARCIAL,
+          returnedAt: now
+        }
+      });
+    });
+
+    res.json({ 
+      success: true, 
+      message: `Devolución procesada exitosamente con reingreso a ${targetBranch.name}`,
+      branchName: targetBranch.name
+    });
+  } catch (error: any) {
+    console.error('Error in return:', error);
+    res.status(500).json({ error: 'Error al procesar devolución', details: error.message });
+  }
+});

@@ -1,0 +1,419 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// ENUMS NATIVOS DE POSTGRESQL
+// ==========================================
+
+enum AssetPropertyType {
+  PROPIO
+  ARRIENDO
+}
+
+enum AssetStatus {
+  BODEGA_DISPONIBLE
+  ASIGNADO
+  EN_MANTENCION
+  DADO_DE_BAJA
+  DEVUELTO_PROVEEDOR
+}
+
+enum PhysicalCondition {
+  NUEVO
+  BUENO
+  REGULAR
+  DETERIORADO
+  IRREPARABLE
+}
+
+enum DeviceCategory {
+  COMPUTO
+  PANTALLAS
+  REDES
+  IMPRESION
+  PERIFERICOS_BIOMETRIA
+}
+
+enum AssignmentType {
+  ENTREGA_INICIAL
+  RENOVACION
+  TEMPORAL
+  DEVOLUCION
+}
+
+enum AssignmentStatus {
+  PENDIENTE_FIRMA
+  FIRMADO_DIGITAL
+  FIRMADO_FISICO_SUBIDO
+  DEVUELTO_COMPLETO
+  DEVUELTO_PARCIAL
+  ANULADO
+}
+
+enum StockMovementType {
+  INGRESO_GUIA
+  ENTREGA_FUNCIONARIO
+  MERMA_DANO
+  AJUSTE_INVENTARIO
+  TRANSFERENCIA
+}
+
+enum PlatformRole {
+  ADMIN_TI
+  ENCARGADO_BODEGA
+  TECNICO_SOPORTE
+  AUDITOR_CONSULTOR
+}
+
+// ==========================================
+// MODELOS DE MAESTROS Y DOCUMENTACIÓN
+// ==========================================
+
+model Branch {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  region    String
+  commune   String
+  address   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  assets           Asset[]
+  consumableStocks ConsumableStock[]
+  stockMovements   StockMovement[]
+  users            UserADCache[]
+  assignments      Assignment[]
+  dispatchGuides   DispatchGuide[]
+  platformUsers    PlatformUser[]
+
+  @@map("branches")
+}
+
+model Supplier {
+  id           String   @id @default(uuid())
+  rut          String   @unique
+  businessName String
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  purchaseOrders   PurchaseOrder[]
+  leasingContracts LeasingContract[]
+  dispatchGuides   DispatchGuide[]
+
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id             String   @id @default(uuid())
+  ocNumber       String   @unique
+  supplierId     String
+  description    String
+  orderDate      DateTime
+  totalAmountCLP Float?
+  documentUrl    String?
+  documentName   String?
+  createdAt      DateTime @default(now())
+
+  supplier       Supplier        @relation(fields: [supplierId], references: [id])
+  dispatchGuides DispatchGuide[]
+  assets         Asset[]
+
+  @@map("purchase_orders")
+}
+
+model LeasingContract {
+  id                   String   @id @default(uuid())
+  contractNumber       String   @unique
+  name                 String
+  supplierId           String
+  startDate            DateTime
+  endDate              DateTime
+  warningDaysThreshold Int      @default(30)
+  documentUrl          String?
+  documentName         String?
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+
+  supplier       Supplier        @relation(fields: [supplierId], references: [id])
+  dispatchGuides DispatchGuide[]
+  assets         Asset[]
+
+  @@map("leasing_contracts")
+}
+
+model DispatchGuide {
+  id                  String   @id @default(uuid())
+  guideNumber         String
+  supplierId          String
+  purchaseOrderId     String?
+  leasingContractId   String?
+  branchId            String
+  dispatchDate        DateTime
+  receptionDate       DateTime @default(now())
+  documentUrl         String?
+  documentName        String?
+  receivedByUserId    String
+  receivedByUserName  String
+  totalItemsCount     Int      @default(0)
+  observations        String?
+  createdAt           DateTime @default(now())
+
+  supplier        Supplier         @relation(fields: [supplierId], references: [id])
+  purchaseOrder   PurchaseOrder?   @relation(fields: [purchaseOrderId], references: [id])
+  leasingContract LeasingContract? @relation(fields: [leasingContractId], references: [id])
+  branch          Branch           @relation(fields: [branchId], references: [id])
+  assets          Asset[]
+  stockMovements  StockMovement[]
+
+  @@unique([supplierId, guideNumber])
+  @@map("dispatch_guides")
+}
+
+// ==========================================
+// MODELOS DE HARDWARE Y ACTIVOS ITAM
+// ==========================================
+
+model AssetType {
+  id                      String         @id @default(uuid())
+  name                    String         @unique
+  category                DeviceCategory
+  requiresInventoryNumber Boolean        @default(true)
+  iconName                String?
+
+  assets Asset[]
+
+  @@map("asset_types")
+}
+
+model Asset {
+  id                String            @id @default(uuid())
+  serialNumber      String            @unique
+  inventoryNumber   String?           @unique
+  brand             String
+  model             String
+  assetTypeId       String
+  propertyType      AssetPropertyType
+  status            AssetStatus       @default(BODEGA_DISPONIBLE)
+  physicalCondition PhysicalCondition @default(NUEVO)
+
+  // Respaldo Documental
+  dispatchGuideId   String
+  purchaseOrderId   String?
+  leasingContractId String?
+
+  // Custodia y Ubicación
+  currentBranchId    String
+  locationDetail     String?
+  assignedToUserId   String?
+  assignedToUserName String?
+  assignedToUserRut  String?
+  assignedToUserDept String?
+  assignedDate       DateTime?
+
+  specifications Json?
+  receptionDate  DateTime @default(now())
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assetType       AssetType        @relation(fields: [assetTypeId], references: [id])
+  dispatchGuide   DispatchGuide    @relation(fields: [dispatchGuideId], references: [id])
+  purchaseOrder   PurchaseOrder?   @relation(fields: [purchaseOrderId], references: [id])
+  leasingContract LeasingContract? @relation(fields: [leasingContractId], references: [id])
+  currentBranch   Branch           @relation(fields: [currentBranchId], references: [id])
+  assignedToUser  UserADCache?     @relation(fields: [assignedToUserId], references: [id])
+
+  assignmentItems AssignmentItem[]
+  auditLogs       AssetAuditLog[]
+
+  @@index([status, propertyType])
+  @@index([currentBranchId])
+  @@map("assets")
+}
+
+// ==========================================
+// INSUMOS Y PERIFÉRICOS NO INVENTARIABLES
+// ==========================================
+
+model Consumable {
+  id            String   @id @default(uuid())
+  sku           String   @unique
+  name          String
+  category      String
+  unitOfMeasure String   @default("UNIDAD")
+  minStockAlert Int      @default(5)
+  description   String?
+  createdAt     DateTime @default(now())
+
+  stocks          ConsumableStock[]
+  movements       StockMovement[]
+  assignmentItems AssignmentItem[]
+
+  @@map("consumables")
+}
+
+model ConsumableStock {
+  id              String   @id @default(uuid())
+  consumableId    String
+  branchId        String
+  currentQuantity Int      @default(0)
+  lastUpdated     DateTime @default(now())
+
+  consumable Consumable @relation(fields: [consumableId], references: [id])
+  branch     Branch     @relation(fields: [branchId], references: [id])
+
+  @@unique([consumableId, branchId])
+  @@map("consumable_stocks")
+}
+
+model StockMovement {
+  id                  String            @id @default(uuid())
+  consumableId        String
+  branchId            String
+  movementType        StockMovementType
+  quantity            Int
+  previousQuantity    Int
+  newQuantity         Int
+  dispatchGuideId     String?
+  dispatchGuideNumber String?
+  assignmentActNumber String?
+  recipientUserName   String?
+  registeredByUserId  String?
+  registeredByName    String
+  reason              String?
+  timestamp           DateTime          @default(now())
+
+  consumable    Consumable     @relation(fields: [consumableId], references: [id])
+  branch        Branch         @relation(fields: [branchId], references: [id])
+  dispatchGuide DispatchGuide? @relation(fields: [dispatchGuideId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// ==========================================
+// ACTIVE DIRECTORY Y ASIGNACIONES
+// ==========================================
+
+model UserADCache {
+  id             String   @id @default(uuid())
+  adGuid         String   @unique
+  samAccountName String   @unique
+  rut            String   @unique
+  firstName      String
+  lastName       String
+  fullName       String
+  email          String
+  jobTitle       String?
+  department     String?
+  branchId       String?
+  role           String   @default("FUNCIONARIO")
+  isActive       Boolean  @default(true)
+  lastSyncedAt   DateTime @default(now())
+
+  branch               Branch?      @relation(fields: [branchId], references: [id])
+  assignedAssets       Asset[]
+  receivedAssignments Assignment[] @relation("RecipientUser")
+  handledAssignments  Assignment[] @relation("TechnicianUser")
+
+  @@index([rut, samAccountName, email])
+  @@map("users_ad_cache")
+}
+
+model Assignment {
+  id                   String           @id @default(uuid())
+  actNumber            String           @unique
+  assignmentType       AssignmentType   @default(ENTREGA_INICIAL)
+  recipientUserId      String
+  technicianUserId     String
+  branchId             String
+  status               AssignmentStatus @default(PENDIENTE_FIRMA)
+  actDocumentUrl       String?
+  signatureDataUrl     String?
+  signedByName         String?
+  digitalSignatureHash String?
+  observations         String?
+  createdAt            DateTime         @default(now())
+  signedAt             DateTime?
+  returnedAt           DateTime?
+
+  recipientUser  UserADCache      @relation("RecipientUser", fields: [recipientUserId], references: [id])
+  technicianUser UserADCache      @relation("TechnicianUser", fields: [technicianUserId], references: [id])
+  branch         Branch           @relation(fields: [branchId], references: [id])
+  items          AssignmentItem[]
+
+  @@map("assignments")
+}
+
+model AssignmentItem {
+  id                     String             @id @default(uuid())
+  assignmentId           String
+  assetId                String?
+  consumableId           String?
+  quantity               Int                @default(1)
+  conditionAtAssignment  PhysicalCondition  @default(BUENO)
+  isReturned             Boolean            @default(false)
+  returnedAt             DateTime?
+  conditionAtReturn      PhysicalCondition?
+  returnNotes            String?
+
+  assignment Assignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  asset      Asset?       @relation(fields: [assetId], references: [id])
+  consumable Consumable? @relation(fields: [consumableId], references: [id])
+
+  @@map("assignment_items")
+}
+
+model AssetAuditLog {
+  id                String             @id @default(uuid())
+  assetId           String
+  serialNumber      String
+  inventoryNumber   String?
+  previousStatus    AssetStatus?
+  newStatus         AssetStatus
+  previousUserId    String?
+  previousUserName  String?
+  newUserId         String?
+  newUserName       String?
+  branchName        String
+  changedByUserName String
+  changeReason      String
+  documentRef       String?
+  timestamp         DateTime           @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("asset_audit_logs")
+}
+
+model PlatformUser {
+  id               String       @id @default(uuid())
+  rut              String       @unique
+  username         String       @unique
+  fullName         String
+  email            String       @unique
+  passwordHash     String
+  role             PlatformRole @default(TECNICO_SOPORTE)
+  jobTitle         String?
+  department       String?      @default("División Tecnologías de la Información (DTI)")
+  branchId         String?
+  branch           Branch?      @relation(fields: [branchId], references: [id])
+  isActive         Boolean      @default(true)
+  lastLoginAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("platform_users")
+  @@index([role])
+  @@index([branchId])
+}
+
