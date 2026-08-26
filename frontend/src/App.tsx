@@ -5,6 +5,7 @@ import { LoginView } from './components/auth/LoginView';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { ReceptionView } from './components/reception/ReceptionView';
 import { InventoryView } from './components/inventory/InventoryView';
+import { TraceabilityView } from './components/traceability/TraceabilityView';
 import { ConsumablesView } from './components/consumables/ConsumablesView';
 import { AssignmentsView } from './components/assignments/AssignmentsView';
 import { ReturnsView } from './components/returns/ReturnsView';
@@ -128,6 +129,10 @@ export const App: React.FC = () => {
               initialSearchQuery={globalSearchTerm}
               onNavigateToAssign={() => handleNavigate('assignments')}
             />
+          )}
+
+          {activeModule === 'traceability' && (
+            <TraceabilityView currentBranchId={currentBranchId} />
           )}
 
           {activeModule === 'consumables' && (

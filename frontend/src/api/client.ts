@@ -1,6 +1,6 @@
 // Cliente HTTP API REST para conectar el Frontend con el Backend (PostgreSQL + Prisma)
 import { storage } from '../db/storage';
-import { Asset, AssetType, AssetStatus, Consumable, ConsumableStock } from '../types/asset';
+import { Asset, AssetType, AssetStatus, Consumable, ConsumableStock, AssetTraceabilityResponse, AssetAuditLog } from '../types/asset';
 import { Branch, Supplier, PurchaseOrder, LeasingContract, DispatchGuide } from '../types/document';
 import { ADUser, PlatformUser, LoginCredentials } from '../types/user';
 import { Assignment } from '../types/assignment';
@@ -142,6 +142,28 @@ export class ApiClient {
     }
   }
 
+  public static async getAssetTraceability(identifier: string): Promise<AssetTraceabilityResponse> {
+    return await fetchJson<AssetTraceabilityResponse>(`/assets/${encodeURIComponent(identifier)}/traceability`);
+  }
+
+  public static async getAuditLogs(params?: { limit?: number; branchName?: string; search?: string } | number): Promise<AssetAuditLog[]> {
+    try {
+      const searchParams = new URLSearchParams();
+      if (typeof params === 'number') {
+        searchParams.append('limit', String(params));
+      } else if (params) {
+        if (params.limit) searchParams.append('limit', String(params.limit));
+        if (params.branchName && params.branchName !== 'ALL') searchParams.append('branchName', params.branchName);
+        if (params.search) searchParams.append('search', params.search);
+      }
+
+      const queryString = searchParams.toString() ? `?${searchParams.toString()}` : '';
+      return await fetchJson<AssetAuditLog[]>(`/assets/audit-logs${queryString}`);
+    } catch {
+      return [];
+    }
+  }
+
   public static async updateAssetStatus(assetId: string, data: { newStatus: AssetStatus; reason: string; newBranchId?: string }): Promise<any> {
     try {
       return await fetchJson(`/assets/${assetId}/status`, {
@@ -180,14 +202,6 @@ export class ApiClient {
       return await fetchJson<Assignment[]>('/assignments');
     } catch {
       return storage.getAssignments();
-    }
-  }
-
-  public static async getAuditLogs(limit: number = 20): Promise<any[]> {
-    try {
-      return await fetchJson<any[]>(`/assets/audit-logs?limit=${limit}`);
-    } catch {
-      return storage.getAuditLogs().slice(0, limit);
     }
   }
 

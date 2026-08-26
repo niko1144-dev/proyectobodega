@@ -91,17 +91,231 @@ assetRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Obtener logs de auditoría globales
+// Obtener logs de auditoría globales (Kardex)
 assetRouter.get('/audit-logs', async (req: Request, res: Response): Promise<void> => {
   try {
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 100;
+    const branchName = req.query.branchName as string;
+    const search = req.query.search as string;
+
+    const where: any = {};
+    if (branchName && branchName !== 'ALL') {
+      where.branchName = { contains: branchName, mode: 'insensitive' };
+    }
+    if (search) {
+      where.OR = [
+        { serialNumber: { contains: search, mode: 'insensitive' } },
+        { inventoryNumber: { contains: search, mode: 'insensitive' } },
+        { changedByUserName: { contains: search, mode: 'insensitive' } },
+        { changeReason: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     const logs = await prisma.assetAuditLog.findMany({
+      where,
+      include: {
+        asset: {
+          include: {
+            assetType: true,
+            currentBranch: true
+          }
+        }
+      },
       orderBy: { timestamp: 'desc' },
       take: limit
     });
     res.json(logs);
   } catch (error: any) {
     res.status(500).json({ error: 'Error al consultar logs de auditoría', details: error.message });
+  }
+});
+
+// Obtener Hoja de Vida y Trazabilidad Completa del Activo (por ID, N° de Serie o N° de Inventario)
+assetRouter.get('/:identifier/traceability', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const identifier = String(req.params.identifier).trim();
+
+    // Buscar activo por ID, Serial Number o Inventory Number
+    const asset = await prisma.asset.findFirst({
+      where: {
+        OR: [
+          { id: identifier },
+          { serialNumber: { equals: identifier, mode: 'insensitive' } },
+          { inventoryNumber: { equals: identifier, mode: 'insensitive' } }
+        ]
+      },
+      include: {
+        assetType: true,
+        currentBranch: true,
+        dispatchGuide: {
+          include: {
+            supplier: true,
+            purchaseOrder: true,
+            leasingContract: { include: { supplier: true } },
+            branch: true
+          }
+        },
+        purchaseOrder: { include: { supplier: true } },
+        leasingContract: { include: { supplier: true } },
+        auditLogs: { orderBy: { timestamp: 'desc' } },
+        assignmentItems: {
+          include: {
+            assignment: {
+              include: {
+                branch: true,
+                recipientUser: true,
+                technicianUser: true
+              }
+            }
+          },
+          orderBy: { assignment: { createdAt: 'desc' } }
+        }
+      }
+    });
+
+    if (!asset) {
+      res.status(404).json({ error: 'Activo no encontrado para la serie o identificador especificado.' });
+      return;
+    }
+
+    // Construir línea de tiempo cronológica unificada de la vida útil del activo
+    const timeline: any[] = [];
+
+    // 1. Evento de Recepción Inicial
+    timeline.push({
+      id: `evt-reception-${asset.id}`,
+      type: 'RECEPCION_GUIA',
+      title: 'Recepción Conforme e Ingreso a Bodega',
+      timestamp: asset.receptionDate || asset.dispatchGuide.receptionDate,
+      category: 'INGRESO',
+      actor: asset.dispatchGuide.receivedByUserName || 'Encargado de Bodega',
+      branchName: asset.dispatchGuide.branch?.name || asset.currentBranch.name,
+      documentRef: `Guía Despacho N° ${asset.dispatchGuide.guideNumber}`,
+      documentType: 'GUIA_DESPACHO',
+      details: {
+        guideNumber: asset.dispatchGuide.guideNumber,
+        supplierName: asset.dispatchGuide.supplier?.businessName || asset.leasingContract?.supplier.businessName || 'Proveedor Acreditado',
+        ocOrContract: asset.purchaseOrder?.ocNumber ? `OC: ${asset.purchaseOrder.ocNumber}` : (asset.leasingContract?.contractNumber ? `Contrato: ${asset.leasingContract.contractNumber}` : 'Adquisición Directa'),
+        physicalCondition: asset.physicalCondition,
+        observations: asset.dispatchGuide.observations || 'Ingreso inicial registrado en sistema'
+      }
+    });
+
+    // 2. Eventos de Asignación y Devolución
+    for (const item of asset.assignmentItems) {
+      const asg = item.assignment;
+      
+      timeline.push({
+        id: `evt-asg-${item.id}`,
+        type: 'ASIGNACION_ACTA',
+        title: asg.assignmentType === 'DEVOLUCION' ? 'Acta de Devolución Registrada' : 'Asignación y Entrega Oficial de Equipamiento TI',
+        timestamp: asg.createdAt,
+        category: 'ENTREGA',
+        actor: asg.technicianUser?.fullName || 'Técnico Responsable',
+        branchName: asg.branch?.name || asset.currentBranch.name,
+        documentRef: `Acta Folio ${asg.actNumber}`,
+        documentType: 'ACTA_ASIGNACION',
+        details: {
+          actNumber: asg.actNumber,
+          assignmentType: asg.assignmentType,
+          recipientName: asg.recipientUser?.fullName || 'Funcionario',
+          recipientRut: asg.recipientUser?.rut || '',
+          recipientJobTitle: asg.recipientUser?.jobTitle || 'Funcionario',
+          recipientDepartment: asg.recipientUser?.department || 'ChileAtiende',
+          recipientBranch: asg.branch?.name || asset.currentBranch.name,
+          signatureStatus: asg.status,
+          digitalSignatureHash: asg.digitalSignatureHash,
+          observations: asg.observations || 'Entrega conforme de hardware institucional'
+        }
+      });
+
+      if (item.isReturned && item.returnedAt) {
+        timeline.push({
+          id: `evt-ret-${item.id}`,
+          type: 'DEVOLUCION_ACTA',
+          title: 'Devolución y Reingreso Físico a Bodega',
+          timestamp: item.returnedAt,
+          category: 'DEVOLUCION',
+          actor: asg.technicianUser?.fullName || 'Técnico Responsable',
+          branchName: asg.branch?.name || asset.currentBranch.name,
+          documentRef: `Acta Folio ${asg.actNumber}`,
+          documentType: 'ACTA_DEVOLUCION',
+          details: {
+            actNumber: asg.actNumber,
+            conditionAtReturn: item.conditionAtReturn || 'BUENO',
+            returnNotes: item.returnNotes || 'Reingreso a stock en bodega'
+          }
+        });
+      }
+    }
+
+    // 3. Eventos de Auditoría y Kardex
+    for (const log of asset.auditLogs) {
+      // Evitar duplicar el evento inicial si ya está en la recepción
+      if (!log.changeReason.includes('Ingreso inicial')) {
+        timeline.push({
+          id: `evt-audit-${log.id}`,
+          type: 'AUDITORIA_KARDEX',
+          title: log.newStatus === 'EN_MANTENCION' ? 'Servicio Técnico / Envío a Taller' : (log.changeReason.includes('Devolución') ? 'Reingreso Físico a Bodega' : 'Cambio de Estado o Custodia'),
+          timestamp: log.timestamp,
+          category: log.newStatus === 'EN_MANTENCION' ? 'MANTENCION' : 'ESTADO',
+          actor: log.changedByUserName,
+          branchName: log.branchName,
+          documentRef: log.documentRef || undefined,
+          documentType: 'LOG_KARDEX',
+          details: {
+            previousStatus: log.previousStatus,
+            newStatus: log.newStatus,
+            previousUserName: log.previousUserName,
+            newUserName: log.newUserName,
+            changeReason: log.changeReason
+          }
+        });
+      }
+    }
+
+    // Ordenar cronológicamente descendente (más reciente arriba)
+    timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    res.json({
+      asset: {
+        id: asset.id,
+        serialNumber: asset.serialNumber,
+        inventoryNumber: asset.inventoryNumber || undefined,
+        brand: asset.brand,
+        model: asset.model,
+        assetTypeId: asset.assetTypeId,
+        assetTypeName: asset.assetType.name,
+        category: asset.assetType.category,
+        propertyType: asset.propertyType,
+        status: asset.status,
+        physicalCondition: asset.physicalCondition,
+        currentBranchId: asset.currentBranchId,
+        currentBranchName: asset.currentBranch.name,
+        currentBranchRegion: asset.currentBranch.region,
+        currentBranchAddress: asset.currentBranch.address,
+        locationDetail: asset.locationDetail || undefined,
+        assignedToUserId: asset.assignedToUserId || undefined,
+        assignedToUserName: asset.assignedToUserName || undefined,
+        assignedToUserRut: asset.assignedToUserRut || undefined,
+        assignedToUserDept: asset.assignedToUserDept || undefined,
+        assignedDate: asset.assignedDate ? asset.assignedDate.toISOString() : undefined,
+        specifications: asset.specifications as any,
+        receptionDate: asset.receptionDate.toISOString(),
+        dispatchGuideId: asset.dispatchGuideId,
+        dispatchGuideNumber: asset.dispatchGuide.guideNumber,
+        supplierName: asset.leasingContract?.supplier.businessName || asset.dispatchGuide.supplier?.businessName || 'Proveedor Acreditado',
+        purchaseOrderId: asset.purchaseOrderId || undefined,
+        purchaseOrderNumber: asset.purchaseOrder?.ocNumber || undefined,
+        leasingContractId: asset.leasingContractId || undefined,
+        leasingContractNumber: asset.leasingContract?.contractNumber || undefined,
+        contractEndDate: asset.leasingContract?.endDate ? asset.leasingContract.endDate.toISOString() : undefined,
+        notes: asset.notes || undefined
+      },
+      timeline
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Error al consultar trazabilidad del activo', details: error.message });
   }
 });
 

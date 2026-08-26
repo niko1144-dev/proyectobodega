@@ -525,10 +525,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
           </div>
 
           <button
-            onClick={() => onNavigate('inventory')}
+            onClick={() => onNavigate('traceability')}
             className="text-xs sm:text-sm text-[#003B70] hover:text-[#002A50] font-bold flex items-center gap-1 hover:underline"
           >
-            Ver Inventario Completo <ArrowRight className="w-4 h-4" />
+            Ver Trazabilidad & Kardex Completo <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
@@ -539,7 +539,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
             auditLogs.map((log: any) => (
               <div 
                 key={log.id} 
-                className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm"
+                onClick={() => onNavigate('traceability')}
+                className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#003B70] shrink-0" />

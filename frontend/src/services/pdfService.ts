@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { Assignment } from '../types/assignment';
-import { Asset } from '../types/asset';
+import { Asset, TimelineEvent } from '../types/asset';
 import { formatDate, formatDateTime } from '../utils/formatters';
 
 export class PDFService {
@@ -384,5 +384,128 @@ export class PDFService {
     }
 
     doc.save(`Etiquetas_Activos_${assets.length}_unidades.pdf`);
+  }
+
+  /**
+   * Genera el Informe Oficial de Hoja de Vida y Trazabilidad de un Activo en PDF
+   */
+  public static async generateAssetLifecyclePDF(asset: Asset, timeline: TimelineEvent[]): Promise<void> {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'letter'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // 1. Membrete Institucional
+    doc.setFillColor(15, 105, 180);
+    doc.rect(0, 0, pageWidth, 6, 'F');
+    doc.setFillColor(235, 59, 69);
+    doc.rect(0, 6, 35, 2.5, 'F');
+    doc.setFillColor(15, 105, 180);
+    doc.rect(35, 6, pageWidth - 35, 2.5, 'F');
+
+    // Cabecera
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(15, 105, 180);
+    doc.text('CHILEATIENDE | INSTITUTO DE PREVISIÓN SOCIAL (IPS)', 14, 18);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 100, 110);
+    doc.text('División de Tecnologías de Información (DTI) • Trazabilidad y Hoja de Vida de Activos TI', 14, 23);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(20, 30, 45);
+    doc.text(`SERIE: ${asset.serialNumber}`, pageWidth - 14, 18, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 100, 110);
+    doc.text(`Emisión: ${formatDateTime(new Date().toISOString())}`, pageWidth - 14, 23, { align: 'right' });
+
+    doc.setDrawColor(220, 225, 230);
+    doc.line(14, 27, pageWidth - 14, 27);
+
+    // Título
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(11, 67, 117);
+    doc.text('HOJA DE VIDA Y KARDEX DE MOVIMIENTOS TI', pageWidth / 2, 34, { align: 'center' });
+
+    // Ficha Técnica del Activo
+    autoTable(doc, {
+      startY: 38,
+      theme: 'plain',
+      styles: { fontSize: 8.5, cellPadding: 2 },
+      columnStyles: {
+        0: { fontStyle: 'bold', textColor: [15, 105, 180], cellWidth: 35 },
+        1: { textColor: [30, 41, 59], cellWidth: 55 },
+        2: { fontStyle: 'bold', textColor: [15, 105, 180], cellWidth: 35 },
+        3: { textColor: [30, 41, 59], cellWidth: 60 }
+      },
+      body: [
+        [
+          'Equipo / Modelo:', `${asset.brand} ${asset.model}`,
+          'Tipo de Propiedad:', asset.propertyType === 'PROPIO' ? `PROPIO (${asset.inventoryNumber || 'S/I'})` : `ARRIENDO (${asset.leasingContractNumber || 'Contrato'})`
+        ],
+        [
+          'Número de Serie:', asset.serialNumber,
+          'Estado Operativo:', asset.status.replace(/_/g, ' ')
+        ],
+        [
+          'Sucursal Actual:', asset.currentBranchName,
+          'Condición Física:', asset.physicalCondition
+        ],
+        [
+          'Custodio Actual:', asset.assignedToUserName ? `${asset.assignedToUserName} (${asset.assignedToUserRut})` : 'En Bodega TI (Sin Asignar)',
+          'Fecha Ingreso:', formatDate(asset.receptionDate)
+        ]
+      ]
+    });
+
+    let currentY = (doc as any).lastAutoTable.finalY + 6;
+
+    // Tabla Histórica de Movimientos
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 105, 180);
+    doc.text(`HISTORIAL CRONOLÓGICO DE MOVIMIENTOS (${timeline.length} REGISTROS)`, 14, currentY);
+
+    const tableBody = timeline.map(evt => [
+      formatDateTime(evt.timestamp),
+      evt.title,
+      evt.branchName,
+      evt.actor,
+      evt.documentRef || 'N/A',
+      evt.details?.recipientName ? `Receptor: ${evt.details.recipientName} (${evt.details.recipientRut || ''})` : (evt.details?.changeReason || evt.details?.observations || '-')
+    ]);
+
+    autoTable(doc, {
+      startY: currentY + 3,
+      head: [['Fecha / Hora', 'Tipo de Movimiento', 'Bodega / Sucursal', 'Responsable', 'Documento Ref.', 'Detalle / Observaciones']],
+      body: tableBody,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [15, 105, 180],
+        textColor: 255,
+        fontSize: 7.5,
+        fontStyle: 'bold'
+      },
+      styles: { fontSize: 7, cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 35, fontStyle: 'bold' },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 28 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 42 }
+      }
+    });
+
+    doc.save(`Hoja_de_Vida_${asset.serialNumber}.pdf`);
   }
 }

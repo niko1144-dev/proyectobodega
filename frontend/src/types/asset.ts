@@ -92,22 +92,60 @@ export interface ConsumableStock {
 }
 
 export interface StockMovement {
-  id: string;
+  id?: string;
   consumableId: string;
   consumableName: string;
   sku: string;
   branchId: string;
   branchName: string;
-  movementType: 'INGRESO_GUIA' | 'ENTREGA_FUNCIONARIO' | 'MERMA_DANO' | 'AJUSTE_INVENTARIO' | 'TRANSFERENCIA';
+  movementType: 'INGRESO_GUIA' | 'SALIDA_ASIGNACION' | 'DEVOLUCION_INGRESO' | 'AJUSTE_INVENTARIO' | 'ENTREGA_FUNCIONARIO' | 'MERMA_DANO' | 'TRANSFERENCIA';
   quantity: number;
-  previousQuantity: number;
-  newQuantity: number;
+  previousQuantity?: number;
+  newQuantity?: number;
   dispatchGuideNumber?: string;
   assignmentActNumber?: string;
   recipientUserName?: string;
-  registeredByUserName: string;
+  registeredByUserName?: string;
+  performedByUserId?: string;
+  performedByUserName?: string;
   reason?: string;
+  timestamp?: string;
+  createdAt?: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  type: 'RECEPCION_GUIA' | 'ASIGNACION_ACTA' | 'DEVOLUCION_ACTA' | 'AUDITORIA_KARDEX' | 'MANTENCION';
+  title: string;
   timestamp: string;
+  category: 'INGRESO' | 'ENTREGA' | 'DEVOLUCION' | 'MANTENCION' | 'ESTADO';
+  actor: string;
+  branchName: string;
+  documentRef?: string;
+  documentType?: 'GUIA_DESPACHO' | 'ACTA_ASIGNACION' | 'ACTA_DEVOLUCION' | 'LOG_KARDEX';
+  details: {
+    guideNumber?: string;
+    supplierName?: string;
+    ocOrContract?: string;
+    physicalCondition?: string;
+    actNumber?: string;
+    assignmentType?: string;
+    recipientName?: string;
+    recipientRut?: string;
+    recipientJobTitle?: string;
+    recipientDepartment?: string;
+    recipientBranch?: string;
+    signatureStatus?: string;
+    digitalSignatureHash?: string;
+    conditionAtReturn?: string;
+    returnNotes?: string;
+    previousStatus?: string;
+    newStatus?: string;
+    previousUserName?: string;
+    newUserName?: string;
+    changeReason?: string;
+    observations?: string;
+  };
 }
 
 export interface AssetAuditLog {
@@ -126,4 +164,13 @@ export interface AssetAuditLog {
   changedByUserName: string;
   changeReason: string;
   documentRef?: string;
+  asset?: Asset;
+}
+
+export interface AssetTraceabilityResponse {
+  asset: Asset & {
+    currentBranchRegion?: string;
+    currentBranchAddress?: string;
+  };
+  timeline: TimelineEvent[];
 }

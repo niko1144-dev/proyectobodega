@@ -10,6 +10,7 @@ import {
   Settings, 
   ShieldCheck, 
   Laptop,
+  History,
   X
 } from 'lucide-react';
 import { PlatformRole } from '../../types/user';
@@ -18,6 +19,7 @@ export type NavModule =
   | 'dashboard'
   | 'reception'
   | 'inventory'
+  | 'traceability'
   | 'consumables'
   | 'assignments'
   | 'returns'
@@ -67,8 +69,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'inventory' as NavModule,
       label: 'Inventario de Activos',
-      description: 'Trazabilidad Propios y Leasing',
+      description: 'Parque de hardware registrado',
       icon: Boxes,
+      visible: true
+    },
+    {
+      id: 'traceability' as NavModule,
+      label: 'Trazabilidad & Vida Útil',
+      description: 'Historial y Kardex por Serie',
+      icon: History,
       visible: true
     },
     {
