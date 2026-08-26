@@ -10,6 +10,7 @@ import { directoryRouter } from './routes/directoryRoutes.js';
 import { masterRouter } from './routes/masterRoutes.js';
 import { authRouter } from './routes/authRoutes.js';
 import { userRouter } from './routes/userRoutes.js';
+import { transferRouter } from './routes/transferRoutes.js';
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use('/api/v1/assets', assetRouter);
 app.use('/api/v1/receptions', receptionRouter);
 app.use('/api/v1/assignments', assignmentRouter);
 app.use('/api/v1/consumables', consumableRouter);
+app.use('/api/v1/transfers', transferRouter);
 app.use('/api/v1/directory', directoryRouter);
 app.use('/api/v1/masters', masterRouter);
 

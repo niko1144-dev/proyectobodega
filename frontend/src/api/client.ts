@@ -293,6 +293,48 @@ export class ApiClient {
     }
   }
 
+  // --- TRASPASOS ENTRE BODEGAS ---
+  public static async transferAssets(payload: {
+    assetIds: string[];
+    sourceBranchId: string;
+    destinationBranchId: string;
+    reason: string;
+    documentRef?: string;
+    transferredByUserName?: string;
+  }): Promise<{ success: boolean; message: string; transferredCount: number; documentRef: string }> {
+    return await fetchJson('/transfers/assets', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  public static async transferConsumables(payload: {
+    consumableId: string;
+    sourceBranchId: string;
+    destinationBranchId: string;
+    quantity: number;
+    reason: string;
+    documentRef?: string;
+    transferredByUserName?: string;
+  }): Promise<{ success: boolean; message: string; transferredQuantity: number; documentRef: string }> {
+    return await fetchJson('/transfers/consumables', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  public static async getAvailableAssetsForTransfer(branchId: string): Promise<any[]> {
+    return await fetchJson(`/transfers/available-assets?branchId=${encodeURIComponent(branchId)}`);
+  }
+
+  public static async getTransferHistory(branchId?: string): Promise<{
+    assetTransfers: any[];
+    consumableTransfers: any[];
+  }> {
+    const q = branchId && branchId !== 'ALL' ? `?branchId=${encodeURIComponent(branchId)}` : '';
+    return await fetchJson(`/transfers/history${q}`);
+  }
+
   // --- MAESTROS ---
   public static async getBranches(includeInactive = false): Promise<Branch[]> {
     try {

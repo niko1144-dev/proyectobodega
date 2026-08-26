@@ -508,4 +508,188 @@ export class PDFService {
 
     doc.save(`Hoja_de_Vida_${asset.serialNumber}.pdf`);
   }
+
+  /**
+   * Genera el Acta Oficial de Traspaso Inter-Bodegas
+   */
+  public static async generateTransferActPDF(data: {
+    documentRef: string;
+    transferDate: string;
+    sourceBranchName: string;
+    destinationBranchName: string;
+    transferredByName: string;
+    reason: string;
+    items: Array<{
+      type: 'ACTIVO' | 'INSUMO';
+      identifier: string;
+      name: string;
+      category: string;
+      quantity: number;
+    }>;
+  }): Promise<jsPDF> {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'letter'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // 1. Membrete Institucional
+    doc.setFillColor(15, 105, 180); // Azul ChileAtiende
+    doc.rect(0, 0, pageWidth, 6, 'F');
+
+    doc.setFillColor(235, 59, 69); // Rojo Gobierno
+    doc.rect(0, 6, 35, 2.5, 'F');
+    doc.setFillColor(15, 105, 180);
+    doc.rect(35, 6, pageWidth - 35, 2.5, 'F');
+
+    // Logo / Texto de Cabecera
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(15, 105, 180);
+    doc.text('CHILEATIENDE | INSTITUTO DE PREVISIÓN SOCIAL (IPS)', 14, 18);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 100, 110);
+    doc.text('División de Tecnologías de Información (DTI) • Control de Inventario & Bodegas', 14, 23);
+
+    // Folio y Fecha
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(20, 30, 45);
+    doc.text(`ACTA DE TRASPASO: ${data.documentRef}`, pageWidth - 14, 18, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 100, 110);
+    doc.text(`Fecha: ${formatDateTime(data.transferDate)}`, pageWidth - 14, 23, { align: 'right' });
+
+    doc.setDrawColor(220, 225, 230);
+    doc.line(14, 27, pageWidth - 14, 27);
+
+    // Título Principal
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(15, 105, 180);
+    doc.text('ACTA OFICIAL DE TRASPASO Y TRASLADO ENTRE BODEGAS TI', pageWidth / 2, 34, { align: 'center' });
+
+    // Cuadro de Información del Traspaso
+    autoTable(doc, {
+      startY: 38,
+      theme: 'plain',
+      styles: { fontSize: 8.5, cellPadding: 2 },
+      columnStyles: {
+        0: { fontStyle: 'bold', textColor: [50, 60, 75], cellWidth: 40 },
+        1: { textColor: [20, 30, 45], cellWidth: 55 },
+        2: { fontStyle: 'bold', textColor: [50, 60, 75], cellWidth: 40 },
+        3: { textColor: [20, 30, 45], cellWidth: 53 }
+      },
+      body: [
+        [
+          'Bodega Origen (Emisora):', data.sourceBranchName,
+          'Bodega Destino (Receptora):', data.destinationBranchName
+        ],
+        [
+          'Responsable del Traspaso:', data.transferredByName,
+          'Total de Ítems / Unidades:', `${data.items.reduce((acc, i) => acc + i.quantity, 0)} unidades (${data.items.length} líneas)`
+        ],
+        [
+          'Motivo / Justificación:', { content: data.reason || 'Traspaso operativo entre dependencias', colSpan: 3 }
+        ]
+      ]
+    });
+
+    let currentY = (doc as any).lastAutoTable.finalY + 6;
+
+    // Tabla de Ítems Traspasados
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 105, 180);
+    doc.text('DETALLE DE EQUIPAMIENTO E INSUMOS TRASPASADOS', 14, currentY);
+
+    const itemsTableBody = data.items.map((item, idx) => [
+      idx + 1,
+      item.type,
+      item.identifier,
+      item.name,
+      item.category,
+      `${item.quantity} un.`
+    ]);
+
+    autoTable(doc, {
+      startY: currentY + 3,
+      head: [['#', 'Tipo', 'N° Serie / SKU', 'Descripción del Ítem', 'Categoría', 'Cantidad']],
+      body: itemsTableBody,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [15, 105, 180],
+        textColor: 255,
+        fontSize: 8,
+        fontStyle: 'bold'
+      },
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 22, fontStyle: 'bold' },
+        2: { cellWidth: 45, fontStyle: 'bold', textColor: [15, 105, 180] },
+        3: { cellWidth: 65 },
+        4: { cellWidth: 28 },
+        5: { cellWidth: 18, halign: 'center', fontStyle: 'bold' }
+      }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 12;
+
+    // Cláusula de Responsabilidad y Custodia
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(90, 100, 110);
+    const clauseText = 'Por medio del presente documento, se certifica el traslado físico y la transferencia de custodia en el sistema ITAM del equipamiento listado precedentemente. La bodega receptora asume la responsabilidad de resguardo, inventario y posterior asignación.';
+    doc.text(doc.splitTextToSize(clauseText, pageWidth - 28), 14, currentY);
+
+    currentY += 20;
+
+    // Firmas de Responsabilidad (Emisor y Receptor)
+    const colWidth = (pageWidth - 38) / 2;
+
+    // Firma Emisor
+    doc.setDrawColor(180, 190, 200);
+    doc.line(14, currentY, 14 + colWidth, currentY);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(20, 30, 45);
+    doc.text('ENTREGADO POR (BODEGA ORIGEN)', 14 + colWidth / 2, currentY + 4, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 110, 120);
+    doc.text(`Firma y Nombre: ${data.transferredByName}`, 14 + colWidth / 2, currentY + 8, { align: 'center' });
+    doc.text(`Fecha: ${formatDateTime(data.transferDate)}`, 14 + colWidth / 2, currentY + 12, { align: 'center' });
+
+    // Firma Receptor
+    const col2X = 14 + colWidth + 10;
+    doc.line(col2X, currentY, col2X + colWidth, currentY);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(20, 30, 45);
+    doc.text('RECIBIDO POR (BODEGA DESTINO)', col2X + colWidth / 2, currentY + 4, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 110, 120);
+    doc.text('Firma y Timbre Encargado de Bodega', col2X + colWidth / 2, currentY + 8, { align: 'center' });
+    doc.text('Fecha Recepción Física: ____/____/2026', col2X + colWidth / 2, currentY + 12, { align: 'center' });
+
+    return doc;
+  }
+
+  public static async openTransferActPDFInNewWindow(data: any): Promise<void> {
+    const doc = await this.generateTransferActPDF(data);
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const newWindow = window.open(blobUrl, '_blank');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      doc.save(`Acta_Traspaso_${data.documentRef}.pdf`);
+    }
+  }
 }

@@ -5,6 +5,7 @@ import { LoginView } from './components/auth/LoginView';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { ReceptionView } from './components/reception/ReceptionView';
 import { InventoryView } from './components/inventory/InventoryView';
+import { TransfersView } from './components/transfers/TransfersView';
 import { TraceabilityView } from './components/traceability/TraceabilityView';
 import { ConsumablesView } from './components/consumables/ConsumablesView';
 import { AssignmentsView } from './components/assignments/AssignmentsView';
@@ -130,6 +131,8 @@ export const App: React.FC = () => {
               onNavigateToAssign={() => handleNavigate('assignments')}
             />
           )}
+
+          {activeModule === 'transfers' && <TransfersView />}
 
           {activeModule === 'traceability' && (
             <TraceabilityView currentBranchId={currentBranchId} />
