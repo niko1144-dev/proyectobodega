@@ -102,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button 
             type="button"
             onClick={() => onNavigate('dashboard')}
-            className="flex items-center gap-3 cursor-pointer select-none hover:opacity-90 active:scale-[0.98] transition-all p-1 -ml-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#003B70]/20 text-left"
+            className="flex items-center gap-3 cursor-pointer select-none hover:opacity-95 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 p-1 -ml-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#003B70]/20 text-left group"
             title="Ir al Inicio / Dashboard"
             aria-label="Ir al Panel de Control Principal"
           >
@@ -112,14 +112,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Buscador Global Institucional */}
         <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center flex-1 max-w-md mx-4 lg:mx-8">
-          <div className="relative w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative w-full group">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#003B70] transition-colors" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por N° Serie, Inventario, RUT o Funcionario..."
-              className="gov-input gov-input-with-icon"
+              className="gov-input gov-input-with-icon transition-all duration-200 focus:shadow-md"
             />
           </div>
         </form>
@@ -150,16 +150,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={handleSyncAD}
             disabled={isSyncing}
             title={`Sincronización AD: ${lastSync}`}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-sm font-semibold text-slate-700 rounded-lg border border-slate-300 shadow-2xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-sm font-semibold text-slate-700 rounded-lg border border-slate-300 shadow-2xs hover:shadow-xs hover:border-slate-400 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 group"
           >
-            <RefreshCw className={`w-4 h-4 text-[#003B70] ${isSyncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-[#003B70] transition-transform duration-300 group-hover:rotate-45 ${isSyncing ? 'animate-spin' : ''}`} />
             <span className="hidden xl:inline">Active Directory</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600 hidden sm:inline" />
           </button>
 
           {/* Perfil del Funcionario / Técnico */}
           <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-slate-200">
-            <div className="w-9 h-9 rounded-lg bg-[#EBF3FA] border border-[#BFDBFE] flex items-center justify-center text-[#003B70] font-bold text-sm shadow-xs">
+            <div className="w-9 h-9 rounded-lg bg-[#EBF3FA] border border-[#BFDBFE] flex items-center justify-center text-[#003B70] font-bold text-sm shadow-xs transition-transform duration-200 hover:scale-105">
               <User className="w-4 h-4" />
             </div>
             <div className="hidden xl:block text-left">
@@ -174,7 +174,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onLogout}
               title="Cerrar Sesión"
-              className="p-2 ml-1 text-slate-400 hover:text-[#E4002B] hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 ml-1 text-slate-400 hover:text-[#E4002B] hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
             >
               <LogOut className="w-4 h-4" />
             </button>

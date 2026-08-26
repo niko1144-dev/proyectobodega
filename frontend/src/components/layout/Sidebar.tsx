@@ -166,31 +166,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => handleItemClick(item.id)}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all duration-150 group ${
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all duration-200 ease-out group relative overflow-hidden ${
                 isActive
-                  ? 'bg-[#EBF3FA] text-[#003B70] font-bold border-l-4 border-l-[#003B70] shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-4 border-l-transparent'
+                  ? 'bg-gradient-to-r from-[#EBF3FA] to-white text-[#003B70] font-bold border-l-4 border-l-[#003B70] shadow-xs translate-x-1'
+                  : 'text-slate-600 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white hover:text-[#003B70] hover:translate-x-1.5 hover:shadow-xs border-l-4 border-l-transparent hover:border-l-[#0F69B4]/60'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className={`p-2 rounded-lg transition-colors shrink-0 ${
+                  className={`p-2 rounded-lg transition-all duration-200 ease-out shrink-0 ${
                     isActive
-                      ? 'bg-[#003B70] text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-500 group-hover:text-slate-800 group-hover:bg-slate-200'
+                      ? 'bg-[#003B70] text-white shadow-sm scale-105'
+                      : 'bg-slate-100 text-slate-500 group-hover:text-white group-hover:bg-[#003B70] group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-xs'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-5 h-5 transition-transform duration-200" />
                 </div>
                 <div className="min-w-0 truncate">
-                  <div className="text-sm leading-tight truncate">{item.label}</div>
-                  <div className="text-xs text-slate-500 font-normal truncate mt-0.5">{item.description}</div>
+                  <div className="text-sm leading-tight truncate font-semibold group-hover:text-[#003B70] transition-colors">{item.label}</div>
+                  <div className="text-xs text-slate-500 font-normal truncate mt-0.5 group-hover:text-slate-600 transition-colors">{item.description}</div>
                 </div>
               </div>
 
               {item.badge && (
                 <span
-                  className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
+                  className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 transition-transform duration-200 group-hover:scale-110 ${
                     item.badgeVariant === 'danger'
                       ? 'bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA]'
                       : 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]'
@@ -207,7 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Pie del Sidebar Institucional */}
       <div className="p-4 border-t border-slate-200 bg-slate-50/80">
         {isAuditor ? (
-          <div className="rounded-xl p-3.5 bg-purple-50 border border-purple-200 shadow-2xs">
+          <div className="rounded-xl p-3.5 bg-purple-50 border border-purple-200 shadow-2xs hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200">
             <div className="flex items-center gap-2 text-sm font-bold text-purple-900">
               <ShieldCheck className="w-4 h-4 text-purple-700" />
               <span>Modo Auditoría</span>
@@ -217,7 +217,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </p>
           </div>
         ) : (
-          <div className="rounded-xl p-3.5 bg-white border border-slate-200 shadow-2xs">
+          <div className="rounded-xl p-3.5 bg-white border border-slate-200 shadow-2xs hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200">
             <div className="flex items-center gap-2 text-sm font-bold text-[#003B70]">
               <Laptop className="w-4 h-4 text-[#003B70]" />
               <span>Mesa de Ayuda DTI</span>
