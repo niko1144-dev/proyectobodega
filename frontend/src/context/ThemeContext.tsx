@@ -20,14 +20,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const applyTheme = (t: ThemeMode) => {
     const root = document.documentElement;
+    const body = document.body;
     if (t === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
+      root.setAttribute('data-theme', 'dark');
+      if (body) {
+        body.classList.add('dark');
+        body.classList.remove('light');
+      }
     } else {
       root.classList.remove('dark');
       root.classList.add('light');
+      root.setAttribute('data-theme', 'light');
+      if (body) {
+        body.classList.remove('dark');
+        body.classList.add('light');
+      }
     }
     localStorage.setItem('itam_theme', t);
+    window.dispatchEvent(new CustomEvent('itam_theme_changed', { detail: { theme: t } }));
   };
 
   useEffect(() => {

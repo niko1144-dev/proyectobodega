@@ -4,24 +4,24 @@ import { useTheme } from '../../context/ThemeContext';
 
 interface ThemeToggleProps {
   className?: string;
-  variant?: 'pill' | 'icon';
+  variant?: 'segmented' | 'pill' | 'icon';
 }
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({ 
   className = '', 
-  variant = 'pill' 
+  variant = 'segmented' 
 }) => {
-  const { isDark, toggleTheme } = useTheme();
+  const { theme, isDark, setTheme } = useTheme();
 
   if (variant === 'icon') {
     return (
       <button
         type="button"
-        onClick={toggleTheme}
+        onClick={() => setTheme(isDark ? 'light' : 'dark')}
         className={`p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 ${
           isDark 
             ? 'bg-[#101C30] hover:bg-[#162744] text-amber-400 border border-[#1E3352] focus:ring-amber-400/40 shadow-xs' 
-            : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 focus:ring-[#003B70]/30 shadow-xs'
+            : 'bg-white hover:bg-slate-100 text-[#003B70] border border-slate-200 focus:ring-[#003B70]/30 shadow-xs'
         } ${className}`}
         title={isDark ? 'Cambiar a Modo Día' : 'Cambiar a Modo Noche'}
         aria-label={isDark ? 'Cambiar a Modo Día' : 'Cambiar a Modo Noche'}
@@ -35,33 +35,46 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     );
   }
 
+  // Segmented Switch con dos botones claros [ ☀️ Día | 🌙 Noche ]
   return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      className={`group flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 focus:outline-none focus:ring-2 ${
-        isDark
-          ? 'bg-[#0E1A2D] hover:bg-[#14233D] text-slate-200 border border-[#1E3352] focus:ring-amber-400/40 shadow-xs'
-          : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 focus:ring-[#003B70]/30 shadow-xs'
+    <div 
+      className={`inline-flex items-center p-1 rounded-full border transition-all duration-200 shadow-xs ${
+        isDark 
+          ? 'bg-[#0B1526] border-[#1E3352]' 
+          : 'bg-slate-100 border-slate-200'
       } ${className}`}
-      title={isDark ? 'Activar Modo Día (Aspecto Claro)' : 'Activar Modo Noche (Aspecto Oscuro Ejecutivo)'}
-      aria-label="Alternar tema de color"
+      role="group"
+      aria-label="Selector de Tema Día / Noche"
     >
-      {isDark ? (
-        <>
-          <div className="w-4 h-4 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-400 group-hover:rotate-45 transition-transform duration-300">
-            <Sun className="w-3 h-3 text-amber-400" />
-          </div>
-          <span className="hidden sm:inline text-amber-300 font-semibold text-[11px]">Modo Noche</span>
-        </>
-      ) : (
-        <>
-          <div className="w-4 h-4 rounded-full bg-blue-50 flex items-center justify-center text-[#003B70] group-hover:-rotate-12 transition-transform duration-300">
-            <Moon className="w-3 h-3 text-[#003B70]" />
-          </div>
-          <span className="hidden sm:inline text-[#003B70] font-semibold text-[11px]">Modo Día</span>
-        </>
-      )}
-    </button>
+      {/* Botón Modo Día */}
+      <button
+        type="button"
+        onClick={() => setTheme('light')}
+        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 focus:outline-none ${
+          !isDark
+            ? 'bg-white text-[#003B70] shadow-sm border border-slate-200/80 scale-100'
+            : 'text-slate-400 hover:text-slate-200 opacity-70 hover:opacity-100'
+        }`}
+        title="Activar Modo Día (Aspecto Claro Institucional)"
+      >
+        <Sun className={`w-3.5 h-3.5 ${!isDark ? 'text-amber-500 fill-amber-500/20' : 'text-slate-400'}`} />
+        <span className="font-semibold">Día</span>
+      </button>
+
+      {/* Botón Modo Noche */}
+      <button
+        type="button"
+        onClick={() => setTheme('dark')}
+        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 focus:outline-none ${
+          isDark
+            ? 'bg-[#003B70] text-white shadow-sm border border-[#38BDF8]/40 scale-100'
+            : 'text-slate-500 hover:text-slate-800 opacity-70 hover:opacity-100'
+        }`}
+        title="Activar Modo Noche (Aspecto Oscuro Ejecutivo)"
+      >
+        <Moon className={`w-3.5 h-3.5 ${isDark ? 'text-[#38BDF8] fill-[#38BDF8]/20' : 'text-slate-400'}`} />
+        <span className="font-semibold">Noche</span>
+      </button>
+    </div>
   );
 };
