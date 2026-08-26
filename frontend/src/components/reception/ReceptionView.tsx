@@ -547,17 +547,17 @@ export const ReceptionView: React.FC = () => {
       {/* Cabecera y Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight">Recepción e Ingreso de Mercadería</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-black text-[#003B70] dark:text-white tracking-tight">Recepción e Ingreso de Mercadería</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 font-medium">
             Ingreso formal con Guías de Despacho SII, Órdenes de Compra y Contratos de Arriendo
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-1 shadow-2xs">
+        <div className="flex items-center gap-1.5 bg-white dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] rounded-lg p-1 shadow-2xs">
           <button
             onClick={() => { setActiveTab('NEW'); setSuccessBatch(null); }}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
-              activeTab === 'NEW' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              activeTab === 'NEW' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Nueva Recepción
@@ -565,7 +565,7 @@ export const ReceptionView: React.FC = () => {
           <button
             onClick={() => setActiveTab('HISTORY')}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
-              activeTab === 'HISTORY' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              activeTab === 'HISTORY' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Historial de Guías ({dispatchGuides.length})

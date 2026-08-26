@@ -54,8 +54,8 @@ html.dark, body.dark, .dark {
   --bg-table-hover: #162744;
   --border-table: #1E3352;
   --text-primary: #FFFFFF;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --text-secondary: #E2E8F0;
+  --text-muted: #94A3B8;
   --text-accent: #38BDF8;
   --shadow-card: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
 }
@@ -67,6 +67,10 @@ html.dark, body.dark, .dark {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     transition: background-color 0.25s ease, color 0.25s ease;
     min-height: 100vh;
+  }
+
+  .dark h1, .dark h2, .dark h3 {
+    color: #FFFFFF;
   }
 }
 

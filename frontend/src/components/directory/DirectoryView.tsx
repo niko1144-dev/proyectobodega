@@ -181,12 +181,12 @@ export const DirectoryView: React.FC = () => {
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#003B70] tracking-tight flex items-center gap-2">
-            <Users2 className="w-8 h-8 text-[#003B70]" />
+          <h1 className="text-2xl sm:text-3xl font-black text-[#003B70] dark:text-white tracking-tight flex items-center gap-2">
+            <Users2 className="w-8 h-8 text-[#003B70] dark:text-[#38BDF8]" />
             <span>Directorio de Funcionarios (Active Directory)</span>
           </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Sincronización dual en vivo: <strong>ChileAtiende (cha.cl)</strong> e <strong>IPS (ips.gob.cl)</strong> • {users.length} funcionarios en catálogo
+          <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 font-medium">
+            Sincronización dual en vivo: <strong className="text-slate-800 dark:text-white">ChileAtiende (cha.cl)</strong> e <strong className="text-slate-800 dark:text-white">IPS (ips.gob.cl)</strong> • {users.length} funcionarios en catálogo
           </p>
         </div>
 

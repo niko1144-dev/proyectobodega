@@ -155,9 +155,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight">Inventario de Activos (ITAM)</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Parque tecnológico institucional: <strong>{filteredAssets.length} activos visibles</strong> de {assets.length}
+          <h1 className="text-2xl font-black text-[#003B70] dark:text-white tracking-tight">Inventario de Activos (ITAM)</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 font-medium">
+            Parque tecnológico institucional: <strong className="text-slate-800 dark:text-white">{filteredAssets.length} activos visibles</strong> de {assets.length}
           </p>
         </div>
 
@@ -409,58 +409,58 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           maxWidth="4xl"
         >
           <div className="space-y-5 text-xs">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-[11px] font-bold text-slate-500 uppercase">Identificación</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] space-y-2">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-[#38BDF8] uppercase">Identificadores</span>
                 <div>
-                  <span className="text-slate-500">N° de Serie:</span>
-                  <p className="font-mono font-bold text-slate-900 text-sm">{selectedAssetForDetail.serialNumber}</p>
+                  <span className="text-slate-500 dark:text-slate-400">N° de Serie:</span>
+                  <p className="font-mono font-bold text-slate-900 dark:text-white text-sm">{selectedAssetForDetail.serialNumber}</p>
                 </div>
                 {selectedAssetForDetail.inventoryNumber && (
                   <div>
-                    <span className="text-slate-500">N° Inventario Institucional:</span>
-                    <p className="font-mono font-bold text-[#003B70]">{selectedAssetForDetail.inventoryNumber}</p>
+                    <span className="text-slate-500 dark:text-slate-400">N° Inventario Institucional:</span>
+                    <p className="font-mono font-bold text-[#003B70] dark:text-[#38BDF8]">{selectedAssetForDetail.inventoryNumber}</p>
                   </div>
                 )}
                 <div>
-                  <span className="text-slate-500">Modalidad:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Modalidad:</span>
                   <div className="mt-1"><PropertyBadge type={selectedAssetForDetail.propertyType} /></div>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-[11px] font-bold text-slate-500 uppercase">Estado & Ubicación</span>
+              <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] space-y-2">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-[#38BDF8] uppercase">Estado & Ubicación</span>
                 <div>
-                  <span className="text-slate-500">Estado Operativo:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Estado Operativo:</span>
                   <div className="mt-1"><StatusBadge status={selectedAssetForDetail.status} /></div>
                 </div>
                 <div>
-                  <span className="text-slate-500">Sucursal Actual:</span>
-                  <p className="text-slate-800 font-semibold">{selectedAssetForDetail.currentBranchName}</p>
+                  <span className="text-slate-500 dark:text-slate-400">Sucursal Actual:</span>
+                  <p className="text-slate-800 dark:text-white font-semibold">{selectedAssetForDetail.currentBranchName}</p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Custodio Actual:</span>
-                  <p className="text-[#003B70] font-bold">{selectedAssetForDetail.assignedToUserName || 'En Bodega TI'}</p>
+                  <span className="text-slate-500 dark:text-slate-400">Custodio Actual:</span>
+                  <p className="text-[#003B70] dark:text-[#38BDF8] font-bold">{selectedAssetForDetail.assignedToUserName || 'En Bodega TI'}</p>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-[11px] font-bold text-slate-500 uppercase">Documentos de Ingreso</span>
+              <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] space-y-2">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-[#38BDF8] uppercase">Documentos de Ingreso</span>
                 <div>
-                  <span className="text-slate-500">Guía de Despacho:</span>
-                  <p className="font-mono font-bold text-slate-900">{selectedAssetForDetail.dispatchGuideNumber}</p>
+                  <span className="text-slate-500 dark:text-slate-400">Guía de Despacho:</span>
+                  <p className="font-mono font-bold text-slate-900 dark:text-white">{selectedAssetForDetail.dispatchGuideNumber}</p>
                 </div>
                 {selectedAssetForDetail.purchaseOrderNumber && (
                   <div>
-                    <span className="text-slate-500">Orden de Compra:</span>
-                    <p className="font-mono text-[#003B70] font-bold">{selectedAssetForDetail.purchaseOrderNumber}</p>
+                    <span className="text-slate-500 dark:text-slate-400">Orden de Compra:</span>
+                    <p className="font-mono text-[#003B70] dark:text-[#38BDF8] font-bold">{selectedAssetForDetail.purchaseOrderNumber}</p>
                   </div>
                 )}
                 {selectedAssetForDetail.leasingContractNumber && (
                   <div>
-                    <span className="text-slate-500">Contrato Arriendo:</span>
-                    <p className="font-mono text-purple-700 font-bold">{selectedAssetForDetail.leasingContractNumber}</p>
-                    <span className="text-[10px] text-slate-500">Vence: {formatDate(selectedAssetForDetail.contractEndDate)}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Contrato Arriendo:</span>
+                    <p className="font-mono text-purple-700 dark:text-purple-300 font-bold">{selectedAssetForDetail.leasingContractNumber}</p>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Vence: {formatDate(selectedAssetForDetail.contractEndDate)}</span>
                   </div>
                 )}
               </div>
@@ -469,20 +469,20 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             {/* Kardex de Auditoría */}
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <History className="w-4 h-4 text-[#003B70]" />
-                <span className="font-bold text-slate-800 text-xs uppercase tracking-wider">Historial de Trazabilidad & Movimientos (Kardex)</span>
+                <History className="w-4 h-4 text-[#003B70] dark:text-[#38BDF8]" />
+                <span className="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-wider">Historial de Trazabilidad & Movimientos (Kardex)</span>
               </div>
 
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                 {storage.getAuditLogs(selectedAssetForDetail.id).map(log => (
-                  <div key={log.id} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex justify-between items-center text-[11px]">
+                  <div key={log.id} className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] flex justify-between items-center text-[11px]">
                     <div>
-                      <p className="font-bold text-slate-800">{log.changeReason}</p>
-                      <span className="text-slate-500">Por: {log.changedByUserName} • {log.branchName}</span>
+                      <p className="font-bold text-slate-800 dark:text-white">{log.changeReason}</p>
+                      <span className="text-slate-500 dark:text-slate-400">Por: {log.changedByUserName} • {log.branchName}</span>
                     </div>
                     <div className="text-right shrink-0">
                       <StatusBadge status={log.newStatus} />
-                      <div className="text-[10px] text-slate-400 mt-0.5">{formatDateTime(log.timestamp)}</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{formatDateTime(log.timestamp)}</div>
                     </div>
                   </div>
                 ))}
@@ -490,7 +490,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
 
             {/* Botones */}
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-[#1E3352]">
               <button
                 onClick={() => PDFService.generateAssetStickersPDF([selectedAssetForDetail])}
                 className="gov-btn-secondary"

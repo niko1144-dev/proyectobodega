@@ -448,8 +448,8 @@ export const SettingsView: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-150">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight">Configuración & Tablas Maestras</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-black text-[#003B70] dark:text-white tracking-tight">Configuración & Tablas Maestras</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 font-medium">
             Administración de Tipos de Hardware, Proveedores, Licitaciones/Contratos y Órdenes de Compra
           </p>
         </div>
@@ -535,23 +535,23 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {feedbackMsg && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-700/60 text-emerald-900 dark:text-emerald-200 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span className="font-semibold">{feedbackMsg}</span>
           </div>
-          <button onClick={() => setFeedbackMsg(null)} className="text-emerald-800 font-bold hover:underline">
+          <button onClick={() => setFeedbackMsg(null)} className="text-emerald-800 dark:text-emerald-300 font-bold hover:underline">
             Cerrar
           </button>
         </div>
       )}
 
       {/* Navegación Tabs */}
-      <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-200">
+      <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-200 dark:border-[#1E3352]/60">
         <button
           onClick={() => setActiveTab('TYPES')}
           className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors ${
-            activeTab === 'TYPES' ? 'bg-[#003B70] text-white shadow-2xs' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            activeTab === 'TYPES' ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40' : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <Laptop className="w-3.5 h-3.5" />
@@ -561,7 +561,7 @@ export const SettingsView: React.FC = () => {
         <button
           onClick={() => setActiveTab('SUPPLIERS')}
           className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors ${
-            activeTab === 'SUPPLIERS' ? 'bg-[#003B70] text-white shadow-2xs' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            activeTab === 'SUPPLIERS' ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40' : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <Truck className="w-3.5 h-3.5" />
@@ -571,7 +571,7 @@ export const SettingsView: React.FC = () => {
         <button
           onClick={() => setActiveTab('POS')}
           className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors ${
-            activeTab === 'POS' ? 'bg-[#003B70] text-white shadow-2xs' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            activeTab === 'POS' ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40' : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <ShoppingBag className="w-3.5 h-3.5" />
@@ -581,7 +581,7 @@ export const SettingsView: React.FC = () => {
         <button
           onClick={() => setActiveTab('LEASING')}
           className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors ${
-            activeTab === 'LEASING' ? 'bg-[#003B70] text-white shadow-2xs' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            activeTab === 'LEASING' ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40' : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -591,7 +591,7 @@ export const SettingsView: React.FC = () => {
         <button
           onClick={() => setActiveTab('BRANCHES')}
           className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors ${
-            activeTab === 'BRANCHES' ? 'bg-[#003B70] text-white shadow-2xs' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            activeTab === 'BRANCHES' ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40' : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <Building2 className="w-3.5 h-3.5" />
@@ -601,7 +601,7 @@ export const SettingsView: React.FC = () => {
         <button
           onClick={() => setActiveTab('SYSTEM')}
           className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors ${
-            activeTab === 'SYSTEM' ? 'bg-[#003B70] text-white shadow-2xs' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            activeTab === 'SYSTEM' ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40' : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <Database className="w-3.5 h-3.5" />

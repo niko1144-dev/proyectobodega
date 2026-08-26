@@ -161,8 +161,8 @@ export const ConsumablesView: React.FC<ConsumablesViewProps> = ({ currentBranchI
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight">Accesorios & Insumos No Inventariables</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-black text-[#003B70] dark:text-white tracking-tight">Accesorios & Insumos No Inventariables</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 font-medium">
             Control de stock cuantitativo por bodega física para cables, adaptadores y periféricos
           </p>
         </div>
@@ -180,18 +180,18 @@ export const ConsumablesView: React.FC<ConsumablesViewProps> = ({ currentBranchI
             }))}
             placeholder="-- Seleccione Bodega Activa --"
             searchPlaceholder="Filtrar bodega por nombre..."
-            icon={<Building2 className="w-4 h-4 text-[#003B70]" />}
+            icon={<Building2 className="w-4 h-4 text-[#003B70] dark:text-[#38BDF8]" />}
           />
         </div>
       </div>
 
       {successFeedback && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between animate-in fade-in duration-150">
+        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-700/60 text-emerald-900 dark:text-emerald-200 text-xs flex items-center justify-between animate-in fade-in duration-150">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span className="font-semibold">{successFeedback}</span>
           </div>
-          <button onClick={() => setSuccessFeedback(null)} className="text-emerald-800 font-bold hover:underline">
+          <button onClick={() => setSuccessFeedback(null)} className="text-emerald-800 dark:text-emerald-300 font-bold hover:underline">
             Cerrar
           </button>
         </div>
@@ -199,12 +199,12 @@ export const ConsumablesView: React.FC<ConsumablesViewProps> = ({ currentBranchI
 
       {/* Alerta si no hay bodega seleccionada */}
       {!selectedBranchId ? (
-        <div className="p-6 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-4">
-          <ShieldAlert className="w-8 h-8 text-amber-600 shrink-0" />
+        <div className="p-6 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 flex items-center gap-4">
+          <ShieldAlert className="w-8 h-8 text-amber-600 dark:text-amber-400 shrink-0" />
           <div>
-            <h3 className="text-sm font-bold text-amber-900">Selección de Bodega Obligatoria</h3>
-            <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
-              Para buscar insumos y registrar entradas o salidas sin alterar inventarios ajenos por error, debe seleccionar la <strong>Sucursal / Bodega física</strong> en el selector superior.
+            <h3 className="text-sm font-bold text-amber-900 dark:text-white">Selección de Bodega Obligatoria</h3>
+            <p className="text-xs text-amber-800 dark:text-slate-300 mt-0.5 leading-relaxed">
+              Para buscar insumos y registrar entradas o salidas sin alterar inventarios ajenos por error, debe seleccionar la <strong className="text-amber-900 dark:text-white">Sucursal / Bodega física</strong> en el selector superior.
             </p>
           </div>
         </div>
@@ -223,14 +223,14 @@ export const ConsumablesView: React.FC<ConsumablesViewProps> = ({ currentBranchI
               />
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-              <Building2 className="w-4 h-4 text-[#003B70]" />
+            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] rounded-lg px-3 py-2">
+              <Building2 className="w-4 h-4 text-[#003B70] dark:text-[#38BDF8]" />
               <span>
-                Bodega: <strong className="text-slate-900 font-bold">{activeBranchObj?.name}</strong>
+                Bodega: <strong className="text-slate-900 dark:text-white font-bold">{activeBranchObj?.name}</strong>
               </span>
-              <span className="text-slate-300">|</span>
+              <span className="text-slate-300 dark:text-slate-600">|</span>
               <span>
-                Stock: <strong className="text-[#003B70]">{filteredConsumables.length} ítems</strong>
+                Stock: <strong className="text-[#003B70] dark:text-[#38BDF8] font-bold">{filteredConsumables.length} ítems</strong>
               </span>
             </div>
           </div>
@@ -246,34 +246,34 @@ export const ConsumablesView: React.FC<ConsumablesViewProps> = ({ currentBranchI
                 <div
                   key={consumable.id}
                   className={`gov-card p-5 space-y-4 transition-all ${
-                    isCritical ? 'border-red-300 bg-red-50/20' : ''
+                    isCritical ? 'border-red-300 dark:border-red-800/80 bg-red-50/20 dark:bg-red-950/20' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-[#0C1729] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#1E3352]">
                         {consumable.sku}
                       </span>
-                      <h3 className="text-sm font-bold text-slate-900 mt-2 leading-tight">{consumable.name}</h3>
-                      <p className="text-[11px] text-slate-500 mt-1">{consumable.description || 'Accesorio no inventariable'}</p>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-2 leading-tight">{consumable.name}</h3>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-300 mt-1">{consumable.description || 'Accesorio no inventariable'}</p>
                     </div>
-                    <div className="p-2.5 rounded-lg bg-[#EBF3FA] text-[#003B70] border border-[#BFDBFE]">
+                    <div className="p-2.5 rounded-lg bg-[#EBF3FA] dark:bg-[#002A50] text-[#003B70] dark:text-[#38BDF8] border border-[#BFDBFE] dark:border-[#38BDF8]/30">
                       <Cable className="w-5 h-5" />
                     </div>
                   </div>
 
                   {/* Indicador de Stock en la Bodega Seleccionada */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-3 border-t border-slate-100 dark:border-[#1E3352]/80 flex items-center justify-between">
                     <div>
                       <div className="flex items-baseline gap-1.5">
-                        <span className={`text-2xl font-black ${isCritical ? 'text-[#E4002B]' : 'text-[#003B70]'}`}>
+                        <span className={`text-2xl font-black ${isCritical ? 'text-[#E4002B] dark:text-[#F87171]' : 'text-[#003B70] dark:text-[#38BDF8]'}`}>
                           {currentQty}
                         </span>
-                        <span className="text-xs text-slate-500 font-medium">unidades</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-300 font-medium">unidades</span>
                       </div>
-                      <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                      <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                         {isCritical ? (
-                          <span className="text-[#E4002B] font-bold flex items-center gap-1">
+                          <span className="text-[#E4002B] dark:text-[#F87171] font-bold flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3" /> Stock Crítico (Mín: {consumable.minStockAlert})
                           </span>
                         ) : (

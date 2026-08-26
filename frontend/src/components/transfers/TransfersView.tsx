@@ -325,11 +325,11 @@ export const TransfersView: React.FC = () => {
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight flex items-center gap-2.5">
-            <ArrowLeftRight className="w-6 h-6 text-[#0F69B4]" />
+          <h1 className="text-2xl font-black text-[#003B70] dark:text-white tracking-tight flex items-center gap-2.5">
+            <ArrowLeftRight className="w-6 h-6 text-[#0F69B4] dark:text-[#38BDF8]" />
             Traspasos & Movimientos Inter-Bodegas
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 font-medium">
             Traslado y transferencia física/lógica de hardware serializado e insumos entre dependencias del IPS
           </p>
         </div>

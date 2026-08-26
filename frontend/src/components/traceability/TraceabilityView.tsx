@@ -175,31 +175,31 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight">Trazabilidad & Hoja de Vida TI</h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 text-[#003B70] font-bold border border-blue-200">
+            <h1 className="text-2xl font-black text-[#003B70] dark:text-white tracking-tight">Trazabilidad & Hoja de Vida TI</h1>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-[#0C2447] text-[#003B70] dark:text-[#60A5FA] font-bold border border-blue-200 dark:border-[#1E4B8A]">
               Kardex Integral
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 font-medium">
             Historial de movimientos, ciclo de vida útil, custodias, actas y recepciones por número de serie
           </p>
         </div>
 
         {/* Pestañas de Vista */}
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-1 shadow-2xs">
+        <div className="flex items-center gap-1.5 bg-white dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] rounded-lg p-1 shadow-2xs">
           <button
             onClick={() => setActiveSubTab('LIFECYCLE')}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${
-              activeSubTab === 'LIFECYCLE' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              activeSubTab === 'LIFECYCLE' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            Hoja de Vida por Serie
+            Línea de Tiempo
           </button>
           <button
             onClick={() => setActiveSubTab('GLOBAL_KARDEX')}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${
-              activeSubTab === 'GLOBAL_KARDEX' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              activeSubTab === 'GLOBAL_KARDEX' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />

@@ -365,8 +365,8 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight">Asignaciones & Actas Oficiales TI</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-black text-[#003B70] dark:text-white tracking-tight">Asignaciones & Actas Oficiales TI</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 font-medium">
             Entrega formal de hardware a funcionarios con validación en Active Directory y deducción exacta de stock por bodega
           </p>
         </div>

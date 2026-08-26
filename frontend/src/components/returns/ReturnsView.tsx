@@ -146,8 +146,8 @@ export const ReturnsView: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
       <div>
-        <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight">Módulo de Devoluciones & Retorno TI</h1>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <h1 className="text-2xl font-black text-[#003B70] dark:text-white tracking-tight">Módulo de Devoluciones & Retorno TI</h1>
+        <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 font-medium">
           Recepción y reingreso de equipamiento asignado con evaluación de condición física y reubicación exacta por bodega
         </p>
       </div>
