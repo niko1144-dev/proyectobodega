@@ -8,35 +8,60 @@ import {
   CheckCircle2, 
   UserCheck,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ShieldCheck,
+  UserPlus,
+  AlertCircle,
+  KeyRound,
+  Lock,
+  Sparkles
 } from 'lucide-react';
-import { ADUser } from '../../types/user';
+import { ADUser, PlatformUser, PlatformRole } from '../../types/user';
 import { Asset } from '../../types/asset';
+import { Branch } from '../../types/document';
 import { PropertyBadge, StatusBadge } from '../common/Badge';
 import { Modal } from '../common/Modal';
+import { SearchableSelect } from '../common/SearchableSelect';
 import { ApiClient } from '../../api/client';
-import { normalizeText } from '../../utils/formatters';
+import { normalizeText, formatRut } from '../../utils/formatters';
 
 export const DirectoryView: React.FC = () => {
   const [users, setUsers] = useState<ADUser[]>([]);
+  const [platformUsers, setPlatformUsers] = useState<PlatformUser[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [accessFilter, setAccessFilter] = useState<'ALL' | 'AUTHORIZED' | 'PENDING'>('ALL');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  
+  // Modales
   const [selectedUserForAssets, setSelectedUserForAssets] = useState<ADUser | null>(null);
+  const [authorizingUser, setAuthorizingUser] = useState<ADUser | null>(null);
+  const [authRole, setAuthRole] = useState<PlatformRole>('TECNICO_SOPORTE');
+  const [authBranchId, setAuthBranchId] = useState<string>('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [feedbackBanner, setFeedbackBanner] = useState<string | null>(null);
   
   // Paginación
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 24;
 
   const loadData = async () => {
-    const [u, a] = await Promise.all([
+    const [u, pUsers, b, a] = await Promise.all([
       ApiClient.searchDirectoryUsers(),
+      ApiClient.getPlatformUsers(),
+      ApiClient.getBranches(),
       ApiClient.getAssets()
     ]);
     // Filtrar cuentas de máquina o nombres vacíos
     const validUsers = u.filter(user => user.fullName && user.fullName.trim().length > 1 && !user.samAccountName.endsWith('$'));
     setUsers(validUsers);
+    setPlatformUsers(pUsers);
+    setBranches(b);
     setAssets(a);
+    if (b.length > 0 && !authBranchId) {
+      setAuthBranchId(b[0].id);
+    }
   };
 
   useEffect(() => {
@@ -49,7 +74,7 @@ export const DirectoryView: React.FC = () => {
     setIsSyncing(true);
     try {
       const result = await ApiClient.syncDirectory();
-      alert(`✓ Sincronización exitosa con Active Directory (cha.cl).\nSe sincronizaron ${result.syncedCount} funcionarios en la base de datos.`);
+      setFeedbackBanner(`✓ Sincronización exitosa con Active Directory Dual (CHA & IPS). Se actualizaron ${result.syncedCount} funcionarios en la base de datos.`);
       await loadData();
     } catch (err: any) {
       alert(`Error al sincronizar: ${err.message}`);
@@ -58,11 +83,60 @@ export const DirectoryView: React.FC = () => {
     }
   };
 
+  const getAuthorizedPlatformUser = (adUser: ADUser): PlatformUser | undefined => {
+    return platformUsers.find(p => 
+      p.username.toLowerCase() === adUser.samAccountName.toLowerCase() ||
+      p.email.toLowerCase() === adUser.email.toLowerCase() ||
+      (adUser.rut && p.rut === adUser.rut)
+    );
+  };
+
+  const handleOpenAuthorizeModal = (adUser: ADUser) => {
+    setAuthorizingUser(adUser);
+    setAuthRole('TECNICO_SOPORTE');
+    if (branches.length > 0) setAuthBranchId(branches[0].id);
+    setAuthError(null);
+  };
+
+  const handleGrantAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authorizingUser) return;
+    setAuthError(null);
+
+    const safeRut = authorizingUser.rut && authorizingUser.rut.length >= 6 
+      ? formatRut(authorizingUser.rut) 
+      : `USR-${authorizingUser.samAccountName.toUpperCase()}`;
+
+    try {
+      await ApiClient.createPlatformUser({
+        rut: safeRut,
+        username: authorizingUser.samAccountName.toLowerCase(),
+        fullName: authorizingUser.fullName,
+        email: authorizingUser.email.toLowerCase(),
+        password: 'AD_AUTHENTICATED',
+        role: authRole,
+        jobTitle: authorizingUser.jobTitle || 'Funcionario ITAM',
+        department: authorizingUser.department || 'ChileAtiende / IPS',
+        branchId: authBranchId || (branches.length > 0 ? branches[0].id : undefined)
+      });
+
+      setAuthorizingUser(null);
+      setFeedbackBanner(`✓ Acceso concedido exitosamente a ${authorizingUser.fullName} con rol ${authRole}.`);
+      await loadData();
+    } catch (err: any) {
+      setAuthError(err.message || 'Error al conceder acceso al usuario.');
+    }
+  };
+
   const filteredUsers = users.filter(u => {
+    const pUser = getAuthorizedPlatformUser(u);
+    if (accessFilter === 'AUTHORIZED' && !pUser) return false;
+    if (accessFilter === 'PENDING' && pUser) return false;
+
     if (!searchTerm.trim()) return true;
     const words = normalizeText(searchTerm).split(/\s+/).filter(Boolean);
     const target = normalizeText(
-      `${u.fullName} ${u.firstName} ${u.lastName} ${u.rut} ${u.samAccountName} ${u.email} ${u.department} ${u.jobTitle} ${u.branchName}`
+      `${u.fullName} ${u.firstName || ''} ${u.lastName || ''} ${u.rut || ''} ${u.samAccountName} ${u.email} ${u.department || ''} ${u.jobTitle || ''} ${u.branchName || ''} ${pUser?.role || ''}`
     );
     return words.every(w => target.includes(w));
   });
@@ -81,16 +155,32 @@ export const DirectoryView: React.FC = () => {
     return assets.filter(a => a.assignedToUserId === userId);
   };
 
+  const getRoleBadge = (role: PlatformRole) => {
+    switch (role) {
+      case 'ADMIN_TI':
+        return <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-[#003B70] text-white">ADMIN TI</span>;
+      case 'ENCARGADO_BODEGA':
+        return <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-blue-50 text-blue-800 border border-blue-200">JEFE BODEGA</span>;
+      case 'TECNICO_SOPORTE':
+        return <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-emerald-50 text-emerald-800 border border-emerald-200">TÉCNICO SOPORTE</span>;
+      case 'AUDITOR_CONSULTOR':
+        return <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-purple-50 text-purple-800 border border-purple-200">AUDITOR CGR</span>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-150">
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#003B70] tracking-tight">
-            Directorio de Funcionarios (Active Directory)
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#003B70] tracking-tight flex items-center gap-2">
+            <Users2 className="w-8 h-8 text-[#003B70]" />
+            <span>Directorio de Funcionarios (Active Directory)</span>
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Sincronización en tiempo real con el dominio institucional <strong>cha.cl</strong> ({users.length} funcionarios registrados)
+            Sincronización dual en vivo: <strong>ChileAtiende (cha.cl)</strong> e <strong>IPS (ips.gob.cl)</strong> • {users.length} funcionarios en catálogo
           </p>
         </div>
 
@@ -100,12 +190,24 @@ export const DirectoryView: React.FC = () => {
           className="gov-btn-primary"
         >
           <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span>{isSyncing ? 'Sincronizando 1800+ usuarios...' : 'Sincronizar Active Directory'}</span>
+          <span>{isSyncing ? 'Sincronizando directorios...' : 'Sincronizar Active Directory'}</span>
         </button>
       </div>
 
-      {/* Barra de Búsqueda y Estadísticas */}
-      <div className="gov-card p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {feedbackBanner && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-semibold">{feedbackBanner}</span>
+          </div>
+          <button onClick={() => setFeedbackBanner(null)} className="text-emerald-800 font-bold hover:underline">
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Barra de Búsqueda y Filtros de Acceso */}
+      <div className="gov-card p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-xl w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
@@ -117,10 +219,26 @@ export const DirectoryView: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
-          <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-[#003B70] border border-blue-200">
-            {filteredUsers.length} funcionarios encontrados
-          </span>
+        {/* Filtros de Acceso */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
+          <button
+            onClick={() => { setAccessFilter('ALL'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'ALL' ? 'bg-white text-[#003B70] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            Todos ({users.length})
+          </button>
+          <button
+            onClick={() => { setAccessFilter('AUTHORIZED'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'AUTHORIZED' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            Con Acceso Plataforma ({platformUsers.length})
+          </button>
+          <button
+            onClick={() => { setAccessFilter('PENDING'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'PENDING' ? 'bg-white text-amber-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            Sin Acceso
+          </button>
         </div>
       </div>
 
@@ -130,11 +248,13 @@ export const DirectoryView: React.FC = () => {
           <div className="col-span-full p-12 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
             <Users2 className="w-12 h-12 mx-auto text-slate-300 mb-3" />
             <p className="text-base font-bold text-slate-600">No se encontraron funcionarios con el criterio de búsqueda</p>
-            <p className="text-xs text-slate-400 mt-1">Intente buscando por nombre, RUT (ej: 13108837-K) o correo institucional</p>
+            <p className="text-xs text-slate-400 mt-1">Intente buscando por nombre, RUT (ej: 13108837-K) o usuario institucional</p>
           </div>
         ) : (
           paginatedUsers.map(user => {
             const assigned = getUserAssignedAssets(user.id);
+            const pUser = getAuthorizedPlatformUser(user);
+            const isIps = user.email.toLowerCase().includes('@ips.gob.cl');
             const initials = user.fullName
               .split(' ')
               .filter(Boolean)
@@ -145,12 +265,12 @@ export const DirectoryView: React.FC = () => {
 
             return (
               <div
-                key={user.id}
-                className="gov-card p-5 space-y-4 hover:shadow-gov-card transition-all flex flex-col justify-between"
+                key={user.id || user.samAccountName}
+                className={`gov-card p-5 space-y-4 hover:shadow-gov-card transition-all flex flex-col justify-between border ${pUser ? 'border-emerald-200 bg-emerald-50/10' : 'border-slate-200'}`}
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-[#003B70] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
                         {initials}
                       </div>
@@ -160,15 +280,48 @@ export const DirectoryView: React.FC = () => {
                       </div>
                     </div>
 
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0] shrink-0">
-                      cha.cl
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border shrink-0 ${isIps ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                      {isIps ? 'ips.gob.cl' : 'cha.cl'}
                     </span>
+                  </div>
+
+                  {/* Estado de Acceso a la Plataforma */}
+                  <div className="flex items-center justify-between pt-1">
+                    {pUser ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="flex h-2 w-2 relative">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        {getRoleBadge(pUser.role)}
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                        <Lock className="w-3 h-3 text-slate-400" />
+                        <span>Sin acceso a plataforma</span>
+                      </span>
+                    )}
+
+                    {pUser ? (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        ✓ Autorizado
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAuthorizeModal(user)}
+                        className="text-[11px] font-bold text-[#003B70] hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md border border-blue-200 transition-colors flex items-center gap-1"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Autorizar</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-1.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
                     <div className="flex justify-between">
                       <span className="text-slate-400">RUT:</span>
-                      <span className="font-mono font-bold text-slate-800">{user.rut}</span>
+                      <span className="font-mono font-bold text-slate-800">{user.rut || 'No informado'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Usuario AD:</span>
@@ -180,7 +333,7 @@ export const DirectoryView: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Depto:</span>
-                      <span className="text-slate-700 truncate max-w-[170px]">{user.department}</span>
+                      <span className="text-slate-700 truncate max-w-[170px]">{user.department || 'Dirección Nacional'}</span>
                     </div>
                   </div>
                 </div>
@@ -240,6 +393,103 @@ export const DirectoryView: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* MODAL PARA AUTORIZAR ACCESO AL SISTEMA */}
+      {authorizingUser && (
+        <Modal
+          isOpen={!!authorizingUser}
+          onClose={() => setAuthorizingUser(null)}
+          title={`Autorizar Acceso: ${authorizingUser.fullName}`}
+          subtitle={`Usuario: ${authorizingUser.samAccountName} • ${authorizingUser.email}`}
+          maxWidth="lg"
+        >
+          <form onSubmit={handleGrantAccess} className="space-y-4 text-xs">
+            {authError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#E4002B]" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-semibold">Nombre Completo:</span>
+                <span className="font-bold text-slate-900">{authorizingUser.fullName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-semibold">RUT:</span>
+                <span className="font-mono font-bold text-slate-900">{authorizingUser.rut || 'No informado'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-semibold">Usuario Active Directory:</span>
+                <span className="font-mono font-bold text-[#003B70]">{authorizingUser.samAccountName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-semibold">Correo Institucional:</span>
+                <span className="font-medium text-slate-800">{authorizingUser.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-semibold">Cargo / Departamento:</span>
+                <span className="text-slate-700">{authorizingUser.jobTitle || 'Funcionario'} ({authorizingUser.department || 'DTI'})</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-emerald-800">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>La autenticación de contraseña se realizará de forma transparente contra <strong>Active Directory</strong>.</span>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Rol y Nivel de Privilegios a Asignar *</label>
+              <SearchableSelect
+                value={authRole}
+                onChange={(val) => setAuthRole(val as PlatformRole)}
+                options={[
+                  { value: 'ADMIN_TI', label: 'ADMINISTRADOR DTI', badge: 'Acceso Total' },
+                  { value: 'ENCARGADO_BODEGA', label: 'ENCARGADO DE BODEGA', badge: 'Stock y Guías' },
+                  { value: 'TECNICO_SOPORTE', label: 'TÉCNICO DE SOPORTE', badge: 'Asignaciones' },
+                  { value: 'AUDITOR_CONSULTOR', label: 'AUDITOR / CGR', badge: 'Solo Lectura' }
+                ]}
+                placeholder="Seleccione rol..."
+                searchPlaceholder="Filtrar rol..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Sucursal Asignada *</label>
+              <SearchableSelect
+                value={authBranchId}
+                onChange={(val) => setAuthBranchId(val)}
+                options={branches.map(b => ({
+                  value: b.id,
+                  label: b.name,
+                  sublabel: b.region,
+                  badge: b.code
+                }))}
+                placeholder="Seleccione sucursal..."
+                searchPlaceholder="Filtrar sucursal..."
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setAuthorizingUser(null)}
+                className="gov-btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="gov-btn-primary"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Conceder Acceso al Sistema</span>
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {/* Modal de Equipos Asignados al Funcionario */}
