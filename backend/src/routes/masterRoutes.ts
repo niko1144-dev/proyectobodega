@@ -6,14 +6,160 @@ import { formatRut, cleanRut, validateRut } from '../utils/formatters.js';
 export const masterRouter = Router();
 
 // ==========================================
-// SUCURSALES
+// SUCURSALES / BODEGAS
 // ==========================================
-masterRouter.get('/branches', async (_req: Request, res: Response): Promise<void> => {
+masterRouter.get('/branches', async (req: Request, res: Response): Promise<void> => {
   try {
-    const branches = await prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
+    const includeInactive = req.query.includeInactive === 'true';
+    const branches = await prisma.branch.findMany({ 
+      where: includeInactive ? undefined : { isActive: true }, 
+      include: {
+        _count: {
+          select: { assets: true, consumableStocks: true, users: true, assignments: true }
+        }
+      },
+      orderBy: { name: 'asc' } 
+    });
     res.json(branches);
   } catch (error: any) {
     res.status(500).json({ error: 'Error al consultar sucursales', details: error.message });
+  }
+});
+
+masterRouter.post('/branches', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { code, name, region, commune, address, isActive } = req.body;
+
+    if (!code?.trim() || !name?.trim() || !region?.trim() || !commune?.trim()) {
+      res.status(400).json({ error: 'Código, Nombre, Región y Comuna son campos obligatorios.' });
+      return;
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const cleanName = name.trim();
+    const cleanRegion = region.trim();
+    const cleanCommune = commune.trim();
+    const cleanAddress = (address || '').trim() || 'Dirección no informada';
+
+    const existing = await prisma.branch.findUnique({
+      where: { code: cleanCode }
+    });
+
+    if (existing) {
+      res.status(409).json({ error: `Ya existe una sucursal o bodega registrada con el código '${cleanCode}' (${existing.name})` });
+      return;
+    }
+
+    const created = await prisma.branch.create({
+      data: {
+        code: cleanCode,
+        name: cleanName,
+        region: cleanRegion,
+        commune: cleanCommune,
+        address: cleanAddress,
+        isActive: isActive !== undefined ? Boolean(isActive) : true
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Bodega '${created.name}' creada exitosamente`,
+      branch: created
+    });
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      res.status(409).json({ error: 'Ya existe una sucursal con ese código.' });
+      return;
+    }
+    res.status(500).json({ error: 'Error al registrar sucursal o bodega', details: error.message });
+  }
+});
+
+masterRouter.put('/branches/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const { code, name, region, commune, address, isActive } = req.body;
+
+    const existing = await prisma.branch.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Sucursal o bodega no encontrada' });
+      return;
+    }
+
+    const cleanCode = code ? code.trim().toUpperCase() : existing.code;
+    const cleanName = name ? name.trim() : existing.name;
+    const cleanRegion = region ? region.trim() : existing.region;
+    const cleanCommune = commune ? commune.trim() : existing.commune;
+    const cleanAddress = address !== undefined ? address.trim() : existing.address;
+    const cleanActive = isActive !== undefined ? Boolean(isActive) : existing.isActive;
+
+    if (cleanCode !== existing.code) {
+      const codeConflict = await prisma.branch.findUnique({ where: { code: cleanCode } });
+      if (codeConflict) {
+        res.status(409).json({ error: `El código '${cleanCode}' ya está siendo utilizado por otra sucursal.` });
+        return;
+      }
+    }
+
+    const updated = await prisma.branch.update({
+      where: { id },
+      data: {
+        code: cleanCode,
+        name: cleanName,
+        region: cleanRegion,
+        commune: cleanCommune,
+        address: cleanAddress,
+        isActive: cleanActive
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Bodega '${updated.name}' actualizada exitosamente`,
+      branch: updated
+    });
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      res.status(409).json({ error: 'Ya existe una sucursal con ese código.' });
+      return;
+    }
+    res.status(500).json({ error: 'Error al actualizar sucursal o bodega', details: error.message });
+  }
+});
+
+masterRouter.delete('/branches/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const branch = await prisma.branch.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { assets: true, consumableStocks: true, assignments: true } }
+      }
+    });
+
+    if (!branch) {
+      res.status(404).json({ error: 'Sucursal o bodega no encontrada' });
+      return;
+    }
+
+    const hasAssets = (branch as any)._count?.assets > 0 || (branch as any)._count?.assignments > 0;
+    if (hasAssets) {
+      const updated = await prisma.branch.update({
+        where: { id },
+        data: { isActive: false }
+      });
+      res.json({
+        success: true,
+        message: `Bodega '${branch.name}' desactivada (posee activos o historial asociado)`,
+        branch: updated
+      });
+      return;
+    }
+
+    await prisma.branch.delete({ where: { id } });
+    res.json({ success: true, message: `Bodega '${branch.name}' eliminada exitosamente` });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Error al eliminar sucursal o bodega', details: error.message });
   }
 });
 

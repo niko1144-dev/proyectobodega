@@ -294,12 +294,50 @@ export class ApiClient {
   }
 
   // --- MAESTROS ---
-  public static async getBranches(): Promise<Branch[]> {
+  public static async getBranches(includeInactive = false): Promise<Branch[]> {
     try {
-      return await fetchJson<Branch[]>('/masters/branches');
+      const q = includeInactive ? '?includeInactive=true' : '';
+      return await fetchJson<Branch[]>(`/masters/branches${q}`);
     } catch {
       return storage.getBranches();
     }
+  }
+
+  public static async createBranch(data: { code: string; name: string; region: string; commune: string; address?: string; isActive?: boolean }): Promise<Branch> {
+    try {
+      const res = await fetchJson<{ success: boolean; branch: Branch }>('/masters/branches', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      return res.branch;
+    } catch (error: any) {
+      const newBranch: Branch = {
+        id: `branch-${Date.now()}`,
+        code: data.code.trim().toUpperCase(),
+        name: data.name.trim(),
+        region: data.region.trim(),
+        commune: data.commune.trim(),
+        address: (data.address || '').trim() || 'Dirección no informada',
+        isActive: data.isActive !== undefined ? data.isActive : true
+      };
+      return newBranch;
+    }
+  }
+
+  public static async updateBranch(id: string, data: Partial<Branch>): Promise<Branch> {
+    try {
+      const res = await fetchJson<{ success: boolean; branch: Branch }>(`/masters/branches/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+      return res.branch;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  public static async deleteBranch(id: string): Promise<any> {
+    return await fetchJson(`/masters/branches/${id}`, { method: 'DELETE' });
   }
 
   public static async getSuppliers(): Promise<Supplier[]> {

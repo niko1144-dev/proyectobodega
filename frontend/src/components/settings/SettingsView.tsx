@@ -10,7 +10,10 @@ import {
   Plus,
   CheckCircle2,
   AlertCircle,
-  Layers
+  Layers,
+  Pencil,
+  MapPin,
+  Power
 } from 'lucide-react';
 import { Branch, Supplier, PurchaseOrder, LeasingContract } from '../../types/document';
 import { AssetType } from '../../types/asset';
@@ -20,6 +23,25 @@ import { ApiClient } from '../../api/client';
 import { Modal } from '../common/Modal';
 import { SearchableSelect } from '../common/SearchableSelect';
 
+const CHILEAN_REGIONS = [
+  'Región de Arica y Parinacota',
+  'Región de Tarapacá',
+  'Región de Antofagasta',
+  'Región de Atacama',
+  'Región de Coquimbo',
+  'Región de Valparaíso',
+  'Región Metropolitana',
+  'Región de O\'Higgins',
+  'Región del Maule',
+  'Región de Ñuble',
+  'Región del Biobío',
+  'Región de La Araucanía',
+  'Región de Los Ríos',
+  'Región de Los Lagos',
+  'Región de Aysén',
+  'Región de Magallanes'
+];
+
 export const SettingsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'TYPES' | 'BRANCHES' | 'SUPPLIERS' | 'POS' | 'LEASING' | 'SYSTEM'>('TYPES');
 
@@ -28,6 +50,28 @@ export const SettingsView: React.FC = () => {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [leasingContracts, setLeasingContracts] = useState<LeasingContract[]>([]);
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
+
+  // Modal Crear Bodega / Sucursal
+  const [isCreateBranchModalOpen, setIsCreateBranchModalOpen] = useState<boolean>(false);
+  const [newBranchCode, setNewBranchCode] = useState<string>('');
+  const [newBranchName, setNewBranchName] = useState<string>('');
+  const [newBranchRegion, setNewBranchRegion] = useState<string>('Región Metropolitana');
+  const [newBranchCommune, setNewBranchCommune] = useState<string>('Santiago');
+  const [newBranchAddress, setNewBranchAddress] = useState<string>('');
+  const [newBranchError, setNewBranchError] = useState<string | null>(null);
+  const [isCreatingBranch, setIsCreatingBranch] = useState<boolean>(false);
+
+  // Modal Editar Bodega / Sucursal
+  const [isEditBranchModalOpen, setIsEditBranchModalOpen] = useState<boolean>(false);
+  const [editingBranchId, setEditingBranchId] = useState<string>('');
+  const [editBranchCode, setEditBranchCode] = useState<string>('');
+  const [editBranchName, setEditBranchName] = useState<string>('');
+  const [editBranchRegion, setEditBranchRegion] = useState<string>('');
+  const [editBranchCommune, setEditBranchCommune] = useState<string>('');
+  const [editBranchAddress, setEditBranchAddress] = useState<string>('');
+  const [editBranchIsActive, setEditBranchIsActive] = useState<boolean>(true);
+  const [editBranchError, setEditBranchError] = useState<string | null>(null);
+  const [isUpdatingBranch, setIsUpdatingBranch] = useState<boolean>(false);
 
   // Modal Crear Tipo de Hardware
   const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState<boolean>(false);
@@ -93,6 +137,118 @@ export const SettingsView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // --- MANEJADORES DE BODEGAS / SUCURSALES ---
+  const handleOpenCreateBranch = () => {
+    setNewBranchCode('');
+    setNewBranchName('');
+    setNewBranchRegion('Región Metropolitana');
+    setNewBranchCommune('Santiago');
+    setNewBranchAddress('');
+    setNewBranchError(null);
+    setIsCreateBranchModalOpen(true);
+  };
+
+  const handleOpenEditBranch = (branch: Branch) => {
+    setEditingBranchId(branch.id);
+    setEditBranchCode(branch.code);
+    setEditBranchName(branch.name);
+    setEditBranchRegion(branch.region);
+    setEditBranchCommune(branch.commune);
+    setEditBranchAddress(branch.address);
+    setEditBranchIsActive(branch.isActive !== false);
+    setEditBranchError(null);
+    setIsEditBranchModalOpen(true);
+  };
+
+  const handleCreateBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewBranchError(null);
+
+    const cleanCode = newBranchCode.trim().toUpperCase();
+    const cleanName = newBranchName.trim();
+    const cleanRegion = newBranchRegion.trim();
+    const cleanCommune = newBranchCommune.trim();
+    const cleanAddress = newBranchAddress.trim() || 'Dirección no informada';
+
+    if (!cleanCode || !cleanName || !cleanRegion || !cleanCommune) {
+      setNewBranchError('Código, Nombre, Región y Comuna son obligatorios.');
+      return;
+    }
+
+    setIsCreatingBranch(true);
+    try {
+      await ApiClient.createBranch({
+        code: cleanCode,
+        name: cleanName,
+        region: cleanRegion,
+        commune: cleanCommune,
+        address: cleanAddress,
+        isActive: true
+      });
+
+      setFeedbackMsg(`✓ Bodega / Sucursal '${cleanName}' registrada exitosamente.`);
+      setIsCreateBranchModalOpen(false);
+      loadData();
+      window.dispatchEvent(new Event('itam_storage_updated'));
+    } catch (err: any) {
+      setNewBranchError(err.message || 'Error al registrar sucursal o bodega.');
+    } finally {
+      setIsCreatingBranch(false);
+    }
+  };
+
+  const handleUpdateBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditBranchError(null);
+
+    const cleanCode = editBranchCode.trim().toUpperCase();
+    const cleanName = editBranchName.trim();
+    const cleanRegion = editBranchRegion.trim();
+    const cleanCommune = editBranchCommune.trim();
+    const cleanAddress = editBranchAddress.trim() || 'Dirección no informada';
+
+    if (!cleanCode || !cleanName || !cleanRegion || !cleanCommune) {
+      setEditBranchError('Código, Nombre, Región y Comuna son obligatorios.');
+      return;
+    }
+
+    setIsUpdatingBranch(true);
+    try {
+      await ApiClient.updateBranch(editingBranchId, {
+        code: cleanCode,
+        name: cleanName,
+        region: cleanRegion,
+        commune: cleanCommune,
+        address: cleanAddress,
+        isActive: editBranchIsActive
+      });
+
+      setFeedbackMsg(`✓ Bodega / Sucursal '${cleanName}' actualizada exitosamente.`);
+      setIsEditBranchModalOpen(false);
+      loadData();
+      window.dispatchEvent(new Event('itam_storage_updated'));
+    } catch (err: any) {
+      setEditBranchError(err.message || 'Error al actualizar sucursal o bodega.');
+    } finally {
+      setIsUpdatingBranch(false);
+    }
+  };
+
+  const handleToggleBranchStatus = async (branch: Branch) => {
+    const nextStatus = !(branch.isActive !== false);
+    const actionWord = nextStatus ? 'activar' : 'desactivar';
+    if (!confirm(`¿Confirma que desea ${actionWord} la bodega '${branch.name}'?`)) return;
+
+    try {
+      await ApiClient.updateBranch(branch.id, { isActive: nextStatus });
+      setFeedbackMsg(`✓ Bodega '${branch.name}' ${nextStatus ? 'activada' : 'desactivada'} exitosamente.`);
+      loadData();
+      window.dispatchEvent(new Event('itam_storage_updated'));
+    } catch (err: any) {
+      alert(`Error al cambiar estado de la bodega: ${err.message}`);
+    }
+  };
 
   const handleCreateAssetType = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,6 +498,16 @@ export const SettingsView: React.FC = () => {
               Crear Contrato / Licitación
             </button>
           )}
+
+          {activeTab === 'BRANCHES' && (
+            <button
+              onClick={handleOpenCreateBranch}
+              className="gov-btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              Crear Nueva Bodega / Sucursal
+            </button>
+          )}
         </div>
       </div>
 
@@ -396,7 +562,7 @@ export const SettingsView: React.FC = () => {
           }`}
         >
           <FileSpreadsheet className="w-3.5 h-3.5" />
-          Contratos & Licitaciones ({leasingContracts.length})
+          Contratos Arriendo ({leasingContracts.length})
         </button>
 
         <button
@@ -406,7 +572,7 @@ export const SettingsView: React.FC = () => {
           }`}
         >
           <Building2 className="w-3.5 h-3.5" />
-          Sucursales ({branches.length})
+          Bodegas & Sucursales ({branches.length})
         </button>
 
         <button
@@ -501,7 +667,7 @@ export const SettingsView: React.FC = () => {
                     <td className="px-3 py-2.5 text-slate-500">{s.contactPhone || '-'}</td>
                     <td className="px-3 py-2.5">
                       <span className="px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0]">
-                        Activo
+                        Habilitado
                       </span>
                     </td>
                   </tr>
@@ -516,106 +682,183 @@ export const SettingsView: React.FC = () => {
       {activeTab === 'POS' && (
         <div className="gov-card p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-800">Órdenes de Compra (OC ChileCompra)</h3>
-            <span className="text-xs text-slate-500 font-semibold">{purchaseOrders.length} OCs registradas</span>
+            <h3 className="text-sm font-bold text-slate-800">Órdenes de Compra (ChileCompra / Mercado Público)</h3>
+            <span className="text-xs text-slate-500 font-semibold">{purchaseOrders.length} órdenes registradas</span>
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#003B70] text-white">
                 <tr>
-                  <th className="px-3 py-2.5 font-bold">N° OC</th>
-                  <th className="px-3 py-2.5 font-bold">Proveedor Adjudicado</th>
-                  <th className="px-3 py-2.5 font-bold">Descripción de la Adquisición</th>
-                  <th className="px-3 py-2.5 font-bold">Monto Total</th>
+                  <th className="px-3 py-2.5 font-bold">N° Orden de Compra</th>
+                  <th className="px-3 py-2.5 font-bold">Proveedor</th>
+                  <th className="px-3 py-2.5 font-bold">Descripción / Glosa</th>
                   <th className="px-3 py-2.5 font-bold">Fecha Emisión</th>
+                  <th className="px-3 py-2.5 font-bold">Monto Total</th>
+                  <th className="px-3 py-2.5 font-bold">Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                {purchaseOrders.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2.5 font-mono font-bold text-[#003B70]">{p.ocNumber}</td>
-                    <td className="px-3 py-2.5 font-bold text-slate-900">{p.supplierName}</td>
-                    <td className="px-3 py-2.5 text-slate-600">{p.description}</td>
-                    <td className="px-3 py-2.5 font-mono font-semibold text-emerald-800">{formatCurrencyCLP(p.totalAmountCLP)}</td>
-                    <td className="px-3 py-2.5 text-slate-500">{formatDate(p.orderDate)}</td>
-                  </tr>
-                ))}
+                {purchaseOrders.map(po => {
+                  const sup = suppliers.find(s => s.id === po.supplierId);
+                  return (
+                    <tr key={po.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2.5 font-mono font-bold text-[#003B70]">{po.ocNumber}</td>
+                      <td className="px-3 py-2.5 font-semibold text-slate-900">{sup ? sup.businessName : po.supplierId}</td>
+                      <td className="px-3 py-2.5 text-slate-600 max-w-xs truncate">{po.description || '-'}</td>
+                      <td className="px-3 py-2.5 text-slate-500">{formatDate(po.orderDate)}</td>
+                      <td className="px-3 py-2.5 font-bold text-slate-900">
+                        {po.totalAmountCLP ? formatCurrencyCLP(po.totalAmountCLP) : '-'}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">
+                          {(po as any).status || 'VIGENTE'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* TAB CONTRATOS & LICITACIONES */}
+      {/* TAB CONTRATOS ARRIENDO */}
       {activeTab === 'LEASING' && (
         <div className="gov-card p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-800">Contratos de Arriendo & Licitaciones Vigentes</h3>
-            <span className="text-xs text-slate-500 font-semibold">{leasingContracts.length} contratos</span>
+            <h3 className="text-sm font-bold text-slate-800">Contratos de Arriendo / Licitaciones de Hardware</h3>
+            <span className="text-xs text-slate-500 font-semibold">{leasingContracts.length} contratos vigentes</span>
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#003B70] text-white">
                 <tr>
-                  <th className="px-3 py-2.5 font-bold">N° Contrato / ID Licitación</th>
+                  <th className="px-3 py-2.5 font-bold">N° Contrato / Licitación</th>
                   <th className="px-3 py-2.5 font-bold">Nombre del Servicio</th>
-                  <th className="px-3 py-2.5 font-bold">Proveedor</th>
-                  <th className="px-3 py-2.5 font-bold">Inicio</th>
-                  <th className="px-3 py-2.5 font-bold">Término / Devolución</th>
-                  <th className="px-3 py-2.5 font-bold">Alerta Anticipación</th>
+                  <th className="px-3 py-2.5 font-bold">Proveedor Adjudicado</th>
+                  <th className="px-3 py-2.5 font-bold">Vigencia (Inicio - Fin)</th>
+                  <th className="px-3 py-2.5 font-bold">Alerta Devolución</th>
                   <th className="px-3 py-2.5 font-bold">Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                {leasingContracts.map(c => (
-                  <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2.5 font-mono font-bold text-blue-700">{c.contractNumber}</td>
-                    <td className="px-3 py-2.5 font-bold text-slate-900">{c.name}</td>
-                    <td className="px-3 py-2.5">{c.supplierName}</td>
-                    <td className="px-3 py-2.5 text-slate-500">{formatDate(c.startDate)}</td>
-                    <td className="px-3 py-2.5 font-bold text-slate-900">{formatDate(c.endDate)}</td>
-                    <td className="px-3 py-2.5 text-slate-600">{c.warningDaysThreshold} días antes</td>
-                    <td className="px-3 py-2.5">
-                      <span className="px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0]">
-                        Vigente
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {leasingContracts.map(c => {
+                  const sup = suppliers.find(s => s.id === c.supplierId);
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2.5 font-mono font-bold text-blue-800">{c.contractNumber}</td>
+                      <td className="px-3 py-2.5 font-bold text-slate-900">{c.name}</td>
+                      <td className="px-3 py-2.5 font-semibold text-slate-700">{sup ? sup.businessName : c.supplierId}</td>
+                      <td className="px-3 py-2.5 text-slate-600">
+                        {formatDate(c.startDate)} al <span className="font-bold text-[#E4002B]">{formatDate(c.endDate)}</span>
+                      </td>
+                      <td className="px-3 py-2.5 font-semibold text-slate-600">
+                        {c.warningDaysThreshold} días antes
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
+                          {(c as any).status || (c.isActive ? 'ACTIVO' : 'VENCIDO')}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* TAB SUCURSALES */}
+      {/* TAB BODEGAS & SUCURSALES */}
       {activeTab === 'BRANCHES' && (
         <div className="gov-card p-5 space-y-4">
-          <h3 className="text-sm font-bold text-slate-800">Sucursales y Puntos de Atención ChileAtiende</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Directorio de Bodegas & Sucursales Regionales</h3>
+              <p className="text-xs text-slate-500">Puntos de almacenamiento, custodia y distribución de equipamiento ITAM a nivel nacional</p>
+            </div>
+            <button
+              onClick={handleOpenCreateBranch}
+              className="gov-btn-primary py-2 text-xs font-bold self-start sm:self-auto"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Nueva Bodega
+            </button>
+          </div>
+
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#003B70] text-white">
                 <tr>
-                  <th className="px-3 py-2.5 font-bold">Código</th>
-                  <th className="px-3 py-2.5 font-bold">Nombre Sucursal</th>
-                  <th className="px-3 py-2.5 font-bold">Región</th>
-                  <th className="px-3 py-2.5 font-bold">Dirección</th>
-                  <th className="px-3 py-2.5 font-bold">Estado</th>
+                  <th className="px-3.5 py-2.5 font-bold">Código</th>
+                  <th className="px-3.5 py-2.5 font-bold">Nombre Bodega / Sucursal</th>
+                  <th className="px-3.5 py-2.5 font-bold">Región & Comuna</th>
+                  <th className="px-3.5 py-2.5 font-bold">Dirección Física</th>
+                  <th className="px-3.5 py-2.5 font-bold text-center">Estado</th>
+                  <th className="px-3.5 py-2.5 font-bold text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
                 {branches.map(b => (
-                  <tr key={b.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2.5 font-mono font-bold text-[#003B70]">{b.code}</td>
-                    <td className="px-3 py-2.5 font-bold text-slate-900">{b.name}</td>
-                    <td className="px-3 py-2.5">{b.region}</td>
-                    <td className="px-3 py-2.5 text-slate-500">{b.address}</td>
-                    <td className="px-3 py-2.5">
-                      <span className="px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0]">
-                        Operativa
+                  <tr key={b.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-3.5 py-3 font-mono font-bold text-[#003B70]">
+                      <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-200">
+                        {b.code}
                       </span>
+                    </td>
+                    <td className="px-3.5 py-3">
+                      <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-[#003B70] shrink-0" />
+                        <span>{b.name}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">ID: {b.id}</div>
+                    </td>
+                    <td className="px-3.5 py-3">
+                      <div className="font-semibold text-slate-800">{b.commune}</div>
+                      <div className="text-[11px] text-slate-500">{b.region}</div>
+                    </td>
+                    <td className="px-3.5 py-3 text-slate-600">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{b.address || 'No informada'}</span>
+                      </div>
+                    </td>
+                    <td className="px-3.5 py-3 text-center">
+                      {b.isActive !== false ? (
+                        <span className="px-2.5 py-1 rounded-full bg-[#ECFDF5] text-[#065F46] font-bold text-[10px] border border-[#A7F3D0]">
+                          ✓ OPERATIVA
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px] border border-slate-300">
+                          INACTIVA
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3.5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditBranch(b)}
+                          className="px-2.5 py-1.5 rounded-lg text-[#003B70] bg-blue-50 hover:bg-blue-100 transition-colors border border-blue-200 font-bold text-xs flex items-center gap-1"
+                          title="Editar Bodega / Sucursal"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleToggleBranchStatus(b)}
+                          className={`p-1.5 rounded-lg transition-colors border ${
+                            b.isActive !== false
+                              ? 'text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200'
+                              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200'
+                          }`}
+                          title={b.isActive !== false ? 'Desactivar bodega' : 'Activar bodega'}
+                        >
+                          <Power className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1064,6 +1307,226 @@ export const SettingsView: React.FC = () => {
               >
                 <Layers className="w-4 h-4" />
                 {isCreatingContract ? 'Guardando en PostgreSQL...' : 'Guardar Contrato'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* MODAL CREAR BODEGA / SUCURSAL */}
+      {isCreateBranchModalOpen && (
+        <Modal
+          isOpen={isCreateBranchModalOpen}
+          onClose={() => setIsCreateBranchModalOpen(false)}
+          title="Agregar Nueva Bodega o Sucursal"
+          subtitle="Registrar un nuevo punto de almacenamiento o atención institucional"
+          maxWidth="md"
+        >
+          <form onSubmit={handleCreateBranch} className="space-y-4 text-xs">
+            {newBranchError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#E4002B]" />
+                <span>{newBranchError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Código Único de Bodega / Sucursal *</label>
+              <input
+                type="text"
+                value={newBranchCode}
+                onChange={(e) => setNewBranchCode(e.target.value.toUpperCase())}
+                placeholder="Ej: BOD-RM-CENTRO / SUC-BIO-CONCEPCION"
+                className="gov-input font-mono font-bold text-[#003B70]"
+                required
+                autoFocus
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Identificador estandarizado de la dependencia</p>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Nombre Oficial de la Bodega / Sucursal *</label>
+              <input
+                type="text"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
+                placeholder="Ej: Bodega Central Alameda / Sucursal Concepción Plaza"
+                className="gov-input font-semibold"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Región Político-Administrativa *</label>
+                <select
+                  value={newBranchRegion}
+                  onChange={(e) => setNewBranchRegion(e.target.value)}
+                  className="gov-input font-medium"
+                  required
+                >
+                  {CHILEAN_REGIONS.map(reg => (
+                    <option key={reg} value={reg}>{reg}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Comuna *</label>
+                <input
+                  type="text"
+                  value={newBranchCommune}
+                  onChange={(e) => setNewBranchCommune(e.target.value)}
+                  placeholder="Ej: Santiago, Concepción, Temuco..."
+                  className="gov-input font-medium"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Dirección Física Completa</label>
+              <input
+                type="text"
+                value={newBranchAddress}
+                onChange={(e) => setNewBranchAddress(e.target.value)}
+                placeholder="Ej: Av. Libertador Bernardo O'Higgins 1353, Piso 3"
+                className="gov-input"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsCreateBranchModalOpen(false)}
+                className="gov-btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isCreatingBranch}
+                className="gov-btn-primary"
+              >
+                <Building2 className="w-4 h-4" />
+                {isCreatingBranch ? 'Guardando en PostgreSQL...' : 'Crear Bodega'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* MODAL EDITAR BODEGA / SUCURSAL */}
+      {isEditBranchModalOpen && (
+        <Modal
+          isOpen={isEditBranchModalOpen}
+          onClose={() => setIsEditBranchModalOpen(false)}
+          title="Editar Bodega o Sucursal"
+          subtitle={`Actualizar información de la dependencia ${editBranchCode}`}
+          maxWidth="md"
+        >
+          <form onSubmit={handleUpdateBranch} className="space-y-4 text-xs">
+            {editBranchError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#E4002B]" />
+                <span>{editBranchError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Código Único de Bodega / Sucursal *</label>
+              <input
+                type="text"
+                value={editBranchCode}
+                onChange={(e) => setEditBranchCode(e.target.value.toUpperCase())}
+                className="gov-input font-mono font-bold text-[#003B70]"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Nombre Oficial de la Bodega / Sucursal *</label>
+              <input
+                type="text"
+                value={editBranchName}
+                onChange={(e) => setEditBranchName(e.target.value)}
+                className="gov-input font-semibold"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Región *</label>
+                <select
+                  value={editBranchRegion}
+                  onChange={(e) => setEditBranchRegion(e.target.value)}
+                  className="gov-input font-medium"
+                  required
+                >
+                  {CHILEAN_REGIONS.map(reg => (
+                    <option key={reg} value={reg}>{reg}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Comuna *</label>
+                <input
+                  type="text"
+                  value={editBranchCommune}
+                  onChange={(e) => setEditBranchCommune(e.target.value)}
+                  className="gov-input font-medium"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Dirección Física</label>
+              <input
+                type="text"
+                value={editBranchAddress}
+                onChange={(e) => setEditBranchAddress(e.target.value)}
+                className="gov-input"
+              />
+            </div>
+
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div>
+                <label className="text-slate-800 font-bold block">Estado de la Dependencia</label>
+                <span className="text-[11px] text-slate-500">
+                  {editBranchIsActive ? 'La bodega se encuentra operativa y habilitada para recepciones y asignaciones' : 'La bodega está temporalmente inactiva o cerrada'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditBranchIsActive(!editBranchIsActive)}
+                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${
+                  editBranchIsActive
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    : 'bg-slate-200 text-slate-700 border border-slate-300'
+                }`}
+              >
+                {editBranchIsActive ? '✓ OPERATIVA' : 'INACTIVA'}
+              </button>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsEditBranchModalOpen(false)}
+                className="gov-btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isUpdatingBranch}
+                className="gov-btn-primary"
+              >
+                <Pencil className="w-4 h-4" />
+                {isUpdatingBranch ? 'Guardando en PostgreSQL...' : 'Actualizar Bodega'}
               </button>
             </div>
           </form>
