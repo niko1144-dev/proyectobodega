@@ -13,7 +13,8 @@ import {
   Layers,
   Pencil,
   MapPin,
-  Power
+  Power,
+  Trash2
 } from 'lucide-react';
 import { Branch, Supplier, PurchaseOrder, LeasingContract } from '../../types/document';
 import { AssetType } from '../../types/asset';
@@ -247,6 +248,28 @@ export const SettingsView: React.FC = () => {
       window.dispatchEvent(new Event('itam_storage_updated'));
     } catch (err: any) {
       alert(`Error al cambiar estado de la bodega: ${err.message}`);
+    }
+  };
+
+  const handleDeleteBranch = async (branch: Branch) => {
+    if (!confirm(`¿Está seguro de que desea eliminar permanentemente la bodega "${branch.name}" (${branch.code})?\n\nEsta acción solo procederá si no existen activos en custodia o documentos vinculados a esta dependencia.`)) {
+      return;
+    }
+
+    try {
+      const res = await ApiClient.deleteBranch(branch.id);
+      if (res && res.error) {
+        alert(res.error);
+        return;
+      }
+      setFeedbackMsg(`✓ Bodega '${branch.name}' eliminada permanentemente.`);
+      if (isEditBranchModalOpen && editingBranchId === branch.id) {
+        setIsEditBranchModalOpen(false);
+      }
+      loadData();
+      window.dispatchEvent(new Event('itam_storage_updated'));
+    } catch (err: any) {
+      alert(`Error al eliminar bodega: ${err.message || 'La bodega contiene activos o historial asociado.'}`);
     }
   };
 
@@ -857,6 +880,13 @@ export const SettingsView: React.FC = () => {
                           title={b.isActive !== false ? 'Desactivar bodega' : 'Activar bodega'}
                         >
                           <Power className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBranch(b)}
+                          className="p-1.5 rounded-lg text-[#E4002B] bg-red-50 hover:bg-red-100 transition-colors border border-red-200"
+                          title="Eliminar bodega permanentemente"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -1512,22 +1542,36 @@ export const SettingsView: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
               <button
                 type="button"
-                onClick={() => setIsEditBranchModalOpen(false)}
-                className="gov-btn-secondary"
+                onClick={() => {
+                  const b = branches.find(item => item.id === editingBranchId);
+                  if (b) handleDeleteBranch(b);
+                }}
+                className="px-3 py-1.5 rounded-lg text-[#E4002B] bg-red-50 hover:bg-red-100 font-bold text-xs flex items-center gap-1.5 border border-red-200"
               >
-                Cancelar
+                <Trash2 className="w-3.5 h-3.5" />
+                Eliminar Bodega
               </button>
-              <button
-                type="submit"
-                disabled={isUpdatingBranch}
-                className="gov-btn-primary"
-              >
-                <Pencil className="w-4 h-4" />
-                {isUpdatingBranch ? 'Guardando en PostgreSQL...' : 'Actualizar Bodega'}
-              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditBranchModalOpen(false)}
+                  className="gov-btn-secondary"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingBranch}
+                  className="gov-btn-primary"
+                >
+                  <Pencil className="w-4 h-4" />
+                  {isUpdatingBranch ? 'Guardando en PostgreSQL...' : 'Actualizar Bodega'}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>

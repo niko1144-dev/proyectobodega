@@ -133,7 +133,15 @@ masterRouter.delete('/branches/:id', async (req: Request, res: Response): Promis
     const branch = await prisma.branch.findUnique({
       where: { id },
       include: {
-        _count: { select: { assets: true, consumableStocks: true, assignments: true } }
+        _count: { 
+          select: { 
+            assets: true, 
+            consumableStocks: true, 
+            assignments: true, 
+            dispatchGuides: true, 
+            stockMovements: true 
+          } 
+        }
       }
     });
 
@@ -142,22 +150,29 @@ masterRouter.delete('/branches/:id', async (req: Request, res: Response): Promis
       return;
     }
 
-    const hasAssets = (branch as any)._count?.assets > 0 || (branch as any)._count?.assignments > 0;
-    if (hasAssets) {
-      const updated = await prisma.branch.update({
-        where: { id },
-        data: { isActive: false }
-      });
-      res.json({
-        success: true,
-        message: `Bodega '${branch.name}' desactivada (posee activos o historial asociado)`,
-        branch: updated
+    const assetCount = (branch as any)._count?.assets || 0;
+    const assignmentCount = (branch as any)._count?.assignments || 0;
+    const guideCount = (branch as any)._count?.dispatchGuides || 0;
+
+    if (assetCount > 0 || assignmentCount > 0 || guideCount > 0) {
+      res.status(400).json({ 
+        error: `No es posible eliminar la bodega '${branch.name}' porque contiene ${assetCount} activos en custodia, ${guideCount} guías de despacho o ${assignmentCount} actas históricas. En su lugar, puedes desactivarla.` 
       });
       return;
     }
 
+    // Limpiar relaciones secundarias antes de eliminar físicamente
+    await prisma.consumableStock.deleteMany({ where: { branchId: id } });
+    await prisma.stockMovement.deleteMany({ where: { branchId: id } });
+    await prisma.userADCache.updateMany({ where: { branchId: id }, data: { branchId: null } });
+    await prisma.platformUser.updateMany({ where: { branchId: id }, data: { branchId: null } });
+
     await prisma.branch.delete({ where: { id } });
-    res.json({ success: true, message: `Bodega '${branch.name}' eliminada exitosamente` });
+
+    res.json({ 
+      success: true, 
+      message: `Bodega '${branch.name}' (${branch.code}) eliminada permanentemente` 
+    });
   } catch (error: any) {
     res.status(500).json({ error: 'Error al eliminar sucursal o bodega', details: error.message });
   }
