@@ -517,7 +517,7 @@ export class LdapService {
     }
 
     // 2. Buscar en IPS (Fallback)
-    if (ipsConfig.isEnabled && ipsConfig.bindPassword && ipsConfig.url && !ipsConfig.url.includes('sips01.ips.gob.cl')) {
+    if (ipsConfig.isEnabled && ipsConfig.bindPassword && ipsConfig.url) {
       let client: Client | null = null;
       try {
         client = this.createClient(ipsConfig);
@@ -688,6 +688,10 @@ export class LdapService {
       const batch = users.slice(i, i + batchSize);
       await Promise.all(
         batch.map(async (u) => {
+          const safeRut = (u.rut && u.rut.length >= 6 && !u.rut.startsWith('CHA-') && !u.rut.startsWith('IPS-'))
+            ? u.rut
+            : `${u.domainOrigin === 'CHILEATIENDE' ? 'CHA' : 'IPS'}-${u.username}`;
+
           try {
             await prisma.userADCache.upsert({
               where: { samAccountName: u.username },
@@ -698,14 +702,14 @@ export class LdapService {
                 email: u.email,
                 jobTitle: u.jobTitle,
                 department: u.department,
-                rut: u.rut,
+                rut: safeRut,
                 lastSyncedAt: now,
                 isActive: true
               },
               create: {
                 adGuid: u.adGuid,
                 samAccountName: u.username,
-                rut: u.rut,
+                rut: safeRut,
                 firstName: u.firstName,
                 lastName: u.lastName,
                 fullName: u.fullName,
@@ -718,8 +722,9 @@ export class LdapService {
             });
             syncedCount++;
           } catch (err: any) {
-            // Manejo de colisión de RUT si aplica
+            // Manejo de colisión de RUT si aplica (asignando RUT único basado en GUID o username)
             try {
+              const fallbackRut = `${u.domainOrigin === 'CHILEATIENDE' ? 'CHA' : 'IPS'}-${u.username}-${Math.floor(100 + Math.random() * 900)}`;
               await prisma.userADCache.upsert({
                 where: { samAccountName: u.username },
                 update: {
@@ -729,14 +734,14 @@ export class LdapService {
                   email: u.email,
                   jobTitle: u.jobTitle,
                   department: u.department,
-                  rut: `${u.domainOrigin === 'CHILEATIENDE' ? 'CHA' : 'IPS'}-${u.username}`,
+                  rut: fallbackRut,
                   lastSyncedAt: now,
                   isActive: true
                 },
                 create: {
                   adGuid: u.adGuid,
                   samAccountName: u.username,
-                  rut: `${u.domainOrigin === 'CHILEATIENDE' ? 'CHA' : 'IPS'}-${u.username}`,
+                  rut: fallbackRut,
                   firstName: u.firstName,
                   lastName: u.lastName,
                   fullName: u.fullName,
