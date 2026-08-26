@@ -148,51 +148,51 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           if (!disabled) setIsOpen(!isOpen);
         }}
         tabIndex={disabled ? -1 : 0}
-        className={`w-full min-h-[40px] px-3.5 py-2 bg-[#0C1729] border rounded-lg flex items-center justify-between gap-2.5 cursor-pointer transition-all ${
+        className={`w-full min-h-[40px] px-3.5 py-2 bg-white dark:bg-[#0C1729] border rounded-lg flex items-center justify-between gap-2.5 cursor-pointer transition-all ${
           isOpen 
-            ? 'border-[#38BDF8] ring-2 ring-[#38BDF8]/20 shadow-sm' 
-            : 'border-[#1E3352] hover:border-[#38BDF8]/60'
-        } ${disabled ? 'cursor-not-allowed bg-[#08101E] opacity-50' : ''}`}
+            ? 'border-[#003B70] dark:border-[#38BDF8] ring-2 ring-[#003B70]/20 dark:ring-[#38BDF8]/20 shadow-sm' 
+            : 'border-slate-300 dark:border-[#1E3352] hover:border-slate-400 dark:hover:border-[#38BDF8]/60'
+        } ${disabled ? 'cursor-not-allowed bg-slate-100 dark:bg-[#08101E] opacity-50' : ''}`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {icon && <span className="text-[#38BDF8] shrink-0">{icon}</span>}
+          {icon && <span className="text-[#003B70] dark:text-[#38BDF8] shrink-0">{icon}</span>}
           
           {selectedOption ? (
             <div className="flex items-center gap-2 truncate">
-              <span className="font-semibold text-slate-100 text-sm truncate">{selectedOption.label}</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">{selectedOption.label}</span>
               {selectedOption.badge && (
-                <span className="text-xs px-2 py-0.5 rounded bg-[#0C2447] text-[#60A5FA] font-bold border border-[#1E4B8A] shrink-0">
+                <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-[#0C2447] text-blue-800 dark:text-[#60A5FA] font-bold border border-blue-200 dark:border-[#1E4B8A] shrink-0">
                   {selectedOption.badge}
                 </span>
               )}
             </div>
           ) : (
-            <span className="text-slate-500 font-normal text-sm truncate">{placeholder}</span>
+            <span className="text-slate-400 dark:text-slate-500 font-normal text-sm truncate">{placeholder}</span>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
+        <div className="flex items-center gap-1.5 shrink-0 text-slate-400 dark:text-slate-400">
           {allowClear && selectedOption && !disabled && (
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 hover:text-[#EF4444] rounded transition-colors"
+              className="p-1 hover:text-[#E4002B] dark:hover:text-[#EF4444] rounded transition-colors"
               title="Limpiar selección"
             >
               <X className="w-4 h-4" />
             </button>
           )}
-          <ChevronDown className={`w-4 h-4 transition-transform duration-150 ${isOpen ? 'rotate-180 text-[#38BDF8]' : ''}`} />
+          <ChevronDown className={`w-4 h-4 transition-transform duration-150 ${isOpen ? 'rotate-180 text-[#003B70] dark:text-[#38BDF8]' : ''}`} />
         </div>
       </div>
 
       {/* Dropdown Flotante con Buscador */}
       {isOpen && (
-        <div className="absolute z-[9999] left-0 right-0 mt-1.5 bg-[#101C30] border border-[#1E3352] rounded-xl shadow-2xl shadow-black/95 overflow-hidden animate-in fade-in duration-100 min-w-[240px]">
+        <div className="absolute z-[9999] left-0 right-0 mt-1.5 bg-white dark:bg-[#101C30] border border-slate-200 dark:border-[#1E3352] rounded-xl shadow-xl dark:shadow-2xl dark:shadow-black/95 overflow-hidden animate-in fade-in duration-100 min-w-[240px]">
           {/* Campo de Búsqueda Integrado */}
-          <div className="p-2.5 border-b border-[#1E3352] bg-[#0C1729]">
+          <div className="p-2.5 border-b border-slate-200 dark:border-[#1E3352] bg-slate-50 dark:bg-[#0C1729]">
             <div className="relative flex items-center">
-              <Search className="absolute left-3 w-4 h-4 text-slate-500 pointer-events-none" />
+              <Search className="absolute left-3 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
               <input
                 ref={inputSearchRef}
                 type="text"
@@ -202,13 +202,13 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   setHighlightedIndex(0);
                 }}
                 placeholder={searchPlaceholder}
-                className="w-full pl-9 pr-8 py-2 bg-[#101C30] border border-[#1E3352] rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8]"
+                className="w-full pl-9 pr-8 py-2 bg-white dark:bg-[#101C30] border border-slate-300 dark:border-[#1E3352] rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-[#003B70] dark:focus:border-[#38BDF8] focus:ring-1 focus:ring-[#003B70] dark:focus:ring-[#38BDF8]"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 text-slate-400 hover:text-white p-1"
+                  className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -219,11 +219,11 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           {/* Lista de Opciones Filtradas */}
           <ul 
             ref={listRef}
-            className="max-h-64 overflow-y-auto py-1 divide-y divide-[#182B48] text-sm"
+            className="max-h-64 overflow-y-auto py-1 divide-y divide-slate-100 dark:divide-[#182B48] text-sm"
             role="listbox"
           >
             {filteredOptions.length === 0 ? (
-              <li className="px-4 py-4 text-center text-slate-500 text-sm italic">
+              <li className="px-4 py-4 text-center text-slate-400 dark:text-slate-500 text-sm italic">
                 {emptyMessage}
               </li>
             ) : (
@@ -242,25 +242,25 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     onMouseEnter={() => setHighlightedIndex(index)}
                     className={`px-3.5 py-2.5 flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
                       option.disabled 
-                        ? 'opacity-40 cursor-not-allowed bg-[#0C1729]' 
+                        ? 'opacity-40 cursor-not-allowed bg-slate-50 dark:bg-[#0C1729]' 
                         : isSelected 
                           ? 'bg-[#003B70] text-white font-bold' 
                           : isHighlighted 
-                            ? 'bg-[#162744] text-white' 
-                            : 'text-slate-200 hover:bg-[#162744]'
+                            ? 'bg-slate-100 dark:bg-[#162744] text-slate-900 dark:text-white' 
+                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#162744]'
                     }`}
                   >
                     <div className="flex flex-col min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate">{option.label}</span>
                         {option.badge && (
-                          <span className={`text-xs px-2 py-0.5 rounded font-semibold shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-[#0C2447] text-[#60A5FA] border border-[#1E4B8A]'}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded font-semibold shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-blue-100 dark:bg-[#0C2447] text-blue-800 dark:text-[#60A5FA] border border-blue-200 dark:border-[#1E4B8A]'}`}>
                             {option.badge}
                           </span>
                         )}
                       </div>
                       {option.sublabel && (
-                        <span className={`text-xs font-normal truncate mt-0.5 ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                        <span className={`text-xs font-normal truncate mt-0.5 ${isSelected ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}>
                           {option.sublabel}
                         </span>
                       )}
@@ -276,7 +276,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           </ul>
 
           {/* Footer Informativo con Total */}
-          <div className="px-3.5 py-1.5 bg-[#0C1729] border-t border-[#1E3352] text-xs text-slate-400 flex items-center justify-between">
+          <div className="px-3.5 py-1.5 bg-slate-50 dark:bg-[#0C1729] border-t border-slate-200 dark:border-[#1E3352] text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
             <span>{filteredOptions.length} opción(es)</span>
             <span className="text-[11px] text-slate-500">↑↓ Navegar • Enter Seleccionar</span>
           </div>

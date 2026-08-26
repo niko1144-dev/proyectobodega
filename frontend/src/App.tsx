@@ -89,7 +89,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0A111E] text-slate-100 antialiased font-sans text-base">
+    <div className="min-h-screen flex flex-col bg-[#F4F6F8] dark:bg-[#0A111E] text-slate-800 dark:text-slate-100 transition-colors duration-200 antialiased font-sans text-base">
       {/* Barra de Navegación Superior */}
       <Navbar
         currentUser={currentUser}

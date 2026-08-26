@@ -168,23 +168,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => handleItemClick(item.id)}
               className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all duration-200 ease-out group relative overflow-hidden ${
                 isActive
-                  ? 'bg-gradient-to-r from-[#003B70] to-[#0055A5] text-white font-bold border-l-4 border-l-[#38BDF8] shadow-md shadow-[#003B70]/30 translate-x-1'
-                  : 'text-slate-300 hover:bg-[#111F36] hover:text-white hover:translate-x-1.5 border-l-4 border-l-transparent hover:border-l-[#38BDF8]'
+                  ? 'bg-gradient-to-r from-[#EBF3FA] to-white dark:from-[#003B70] dark:to-[#0055A5] text-[#003B70] dark:text-white font-bold border-l-4 border-l-[#003B70] dark:border-l-[#38BDF8] shadow-xs dark:shadow-md dark:shadow-[#003B70]/30 translate-x-1'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#111F36] hover:text-[#003B70] dark:hover:text-white hover:translate-x-1.5 border-l-4 border-l-transparent hover:border-l-[#003B70] dark:hover:border-l-[#38BDF8]'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div
                   className={`p-2 rounded-lg transition-all duration-200 ease-out shrink-0 ${
                     isActive
-                      ? 'bg-[#002A50] text-[#38BDF8] shadow-sm scale-105 border border-[#38BDF8]/40'
-                      : 'bg-[#0D1829] text-slate-400 group-hover:text-white group-hover:bg-[#003B70] group-hover:scale-110 group-hover:rotate-3 border border-[#1A2E4C]'
+                      ? 'bg-[#003B70] dark:bg-[#002A50] text-white dark:text-[#38BDF8] shadow-sm scale-105 border border-transparent dark:border-[#38BDF8]/40'
+                      : 'bg-slate-100 dark:bg-[#0D1829] text-slate-500 dark:text-slate-400 group-hover:text-white group-hover:bg-[#003B70] group-hover:scale-110 group-hover:rotate-3 border border-slate-200 dark:border-[#1A2E4C]'
                   }`}
                 >
                   <Icon className="w-5 h-5 transition-transform duration-200" />
                 </div>
                 <div className="min-w-0 truncate">
-                  <div className={`text-sm leading-tight truncate font-semibold transition-colors ${isActive ? 'text-white' : 'text-slate-200 group-hover:text-white'}`}>{item.label}</div>
-                  <div className={`text-xs font-normal truncate mt-0.5 transition-colors ${isActive ? 'text-blue-100' : 'text-slate-400 group-hover:text-slate-300'}`}>{item.description}</div>
+                  <div className={`text-sm leading-tight truncate font-semibold transition-colors ${
+                    isActive ? 'text-[#003B70] dark:text-white' : 'text-slate-700 dark:text-slate-200 group-hover:text-[#003B70] dark:group-hover:text-white'
+                  }`}>
+                    {item.label}
+                  </div>
+                  <div className={`text-xs font-normal truncate mt-0.5 transition-colors ${
+                    isActive ? 'text-blue-700 dark:text-blue-100' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'
+                  }`}>
+                    {item.description}
+                  </div>
                 </div>
               </div>
 
@@ -192,8 +200,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span
                   className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 transition-transform duration-200 group-hover:scale-110 ${
                     item.badgeVariant === 'danger'
-                      ? 'bg-red-950/80 text-red-300 border border-red-700/60'
-                      : 'bg-amber-950/80 text-amber-300 border border-amber-700/60'
+                      ? 'bg-red-50 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700/60'
+                      : 'bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700/60'
                   }`}
                 >
                   {item.badge}
@@ -205,25 +213,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Pie del Sidebar Institucional */}
-      <div className="p-4 border-t border-[#16263F] bg-[#060C17]">
+      <div className="p-4 border-t border-slate-200 dark:border-[#16263F] bg-slate-50/80 dark:bg-[#060C17]">
         {isAuditor ? (
-          <div className="rounded-xl p-3.5 bg-purple-950/50 border border-purple-800/50 shadow-2xs hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200">
-            <div className="flex items-center gap-2 text-sm font-bold text-purple-300">
-              <ShieldCheck className="w-4 h-4 text-purple-400" />
+          <div className="rounded-xl p-3.5 bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800/50 shadow-2xs hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200">
+            <div className="flex items-center gap-2 text-sm font-bold text-purple-900 dark:text-purple-300">
+              <ShieldCheck className="w-4 h-4 text-purple-700 dark:text-purple-400" />
               <span>Modo Auditoría</span>
             </div>
-            <p className="text-xs text-purple-300/80 mt-1 leading-relaxed">
+            <p className="text-xs text-purple-700 dark:text-purple-300/80 mt-1 leading-relaxed">
               Acceso en Solo Lectura habilitado para Contraloría / Jefatura.
             </p>
           </div>
         ) : (
-          <div className="rounded-xl p-3.5 bg-[#0D182B] border border-[#1B2F4E] shadow-2xs hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200">
-            <div className="flex items-center gap-2 text-sm font-bold text-[#38BDF8]">
-              <Laptop className="w-4 h-4 text-[#38BDF8]" />
+          <div className="rounded-xl p-3.5 bg-white dark:bg-[#0D182B] border border-slate-200 dark:border-[#1B2F4E] shadow-2xs hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200">
+            <div className="flex items-center gap-2 text-sm font-bold text-[#003B70] dark:text-[#38BDF8]">
+              <Laptop className="w-4 h-4 text-[#003B70] dark:text-[#38BDF8]" />
               <span>Mesa de Ayuda DTI</span>
             </div>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Soporte TI: Anexo <strong className="text-slate-200">8700</strong> o soporteti@chileatiende.cl
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+              Soporte TI: Anexo <strong className="text-slate-800 dark:text-slate-200">8700</strong> o soporteti@chileatiende.cl
             </p>
           </div>
         )}
@@ -234,7 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar (visible on lg+) */}
-      <aside className="hidden lg:flex w-64 bg-[#070D1A] border-r border-[#16263F] flex-col justify-between shrink-0 select-none min-h-[calc(100vh-65px)] shadow-md">
+      <aside className="hidden lg:flex w-64 bg-white dark:bg-[#070D1A] border-r border-slate-200 dark:border-[#16263F] flex-col justify-between shrink-0 select-none min-h-[calc(100vh-65px)] shadow-2xs dark:shadow-md transition-colors duration-200">
         {sidebarContent}
       </aside>
 
@@ -243,12 +251,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="fixed inset-0 z-50 lg:hidden flex">
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity animate-in fade-in"
+            className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs transition-opacity animate-in fade-in"
             onClick={onCloseMobile}
           />
           
           {/* Drawer Panel */}
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-[#070D1A] border-r border-[#16263F] shadow-2xl animate-in slide-in-from-left duration-200 z-10">
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-[#070D1A] border-r border-slate-200 dark:border-[#16263F] shadow-2xl animate-in slide-in-from-left duration-200 z-10">
             {sidebarContent}
           </div>
         </div>
