@@ -38,7 +38,7 @@ export const DirectoryView: React.FC = () => {
   const [selectedUserForAssets, setSelectedUserForAssets] = useState<ADUser | null>(null);
   const [authorizingUser, setAuthorizingUser] = useState<ADUser | null>(null);
   const [authRole, setAuthRole] = useState<PlatformRole>('TECNICO_SOPORTE');
-  const [authBranchId, setAuthBranchId] = useState<string>('');
+  const [authBranchIds, setAuthBranchIds] = useState<string[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
   const [feedbackBanner, setFeedbackBanner] = useState<string | null>(null);
   
@@ -59,8 +59,8 @@ export const DirectoryView: React.FC = () => {
     setPlatformUsers(pUsers);
     setBranches(b);
     setAssets(a);
-    if (b.length > 0 && !authBranchId) {
-      setAuthBranchId(b[0].id);
+    if (b.length > 0 && authBranchIds.length === 0) {
+      setAuthBranchIds([b[0].id]);
     }
   };
 
@@ -94,7 +94,7 @@ export const DirectoryView: React.FC = () => {
   const handleOpenAuthorizeModal = (adUser: ADUser) => {
     setAuthorizingUser(adUser);
     setAuthRole('TECNICO_SOPORTE');
-    if (branches.length > 0) setAuthBranchId(branches[0].id);
+    setAuthBranchIds(branches.length > 0 ? [branches[0].id] : []);
     setAuthError(null);
   };
 
@@ -102,6 +102,11 @@ export const DirectoryView: React.FC = () => {
     e.preventDefault();
     if (!authorizingUser) return;
     setAuthError(null);
+
+    if (authBranchIds.length === 0) {
+      setAuthError('Debe seleccionar al menos una bodega o sucursal autorizada.');
+      return;
+    }
 
     const safeRut = authorizingUser.rut && authorizingUser.rut.length >= 6 
       ? formatRut(authorizingUser.rut) 
@@ -117,11 +122,12 @@ export const DirectoryView: React.FC = () => {
         role: authRole,
         jobTitle: authorizingUser.jobTitle || 'Funcionario ITAM',
         department: authorizingUser.department || 'ChileAtiende / IPS',
-        branchId: authBranchId || (branches.length > 0 ? branches[0].id : undefined)
+        branchId: authBranchIds[0],
+        assignedBranchIds: authBranchIds
       });
 
       setAuthorizingUser(null);
-      setFeedbackBanner(`✓ Acceso concedido exitosamente a ${authorizingUser.fullName} con rol ${authRole}.`);
+      setFeedbackBanner(`✓ Acceso concedido exitosamente a ${authorizingUser.fullName} con rol ${authRole} (${authBranchIds.length} bodegas asignadas).`);
       await loadData();
     } catch (err: any) {
       setAuthError(err.message || 'Error al conceder acceso al usuario.');
@@ -456,20 +462,68 @@ export const DirectoryView: React.FC = () => {
               />
             </div>
 
+            {/* Selector Multi-Bodega */}
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Sucursal Asignada *</label>
-              <SearchableSelect
-                value={authBranchId}
-                onChange={(val) => setAuthBranchId(val)}
-                options={branches.map(b => ({
-                  value: b.id,
-                  label: b.name,
-                  sublabel: b.region,
-                  badge: b.code
-                }))}
-                placeholder="Seleccione sucursal..."
-                searchPlaceholder="Filtrar sucursal..."
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-slate-700 font-bold">Bodegas / Sucursales Autorizadas (1 o varias) *</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAuthBranchIds(branches.map(b => b.id))}
+                    className="text-[11px] text-[#003B70] font-bold hover:underline"
+                  >
+                    Seleccionar Todas ({branches.length})
+                  </button>
+                  <span className="text-slate-300">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setAuthBranchIds([])}
+                    className="text-[11px] text-slate-500 font-semibold hover:underline"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-44 overflow-y-auto">
+                {branches.map(b => {
+                  const isSelected = authBranchIds.includes(b.id);
+                  return (
+                    <label
+                      key={b.id}
+                      className={`flex items-center gap-2.5 p-2 rounded-lg border cursor-pointer transition-all ${
+                        isSelected 
+                          ? 'bg-blue-50/90 border-[#003B70] text-[#003B70] font-bold shadow-xs' 
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          if (isSelected) {
+                            setAuthBranchIds(authBranchIds.filter(id => id !== b.id));
+                          } else {
+                            setAuthBranchIds([...authBranchIds, b.id]);
+                          }
+                        }}
+                        className="w-4 h-4 rounded text-[#003B70] focus:ring-[#003B70]"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs truncate">{b.name}</div>
+                        <div className="text-[10px] text-slate-400 font-normal">{b.region} • {b.code}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {authBranchIds.length === 0 ? (
+                  <span className="text-red-500 font-semibold">⚠️ Debe seleccionar al menos una bodega o sucursal.</span>
+                ) : (
+                  <span className="text-emerald-700 font-semibold">✓ <strong>{authBranchIds.length}</strong> {authBranchIds.length === 1 ? 'bodega seleccionada' : 'bodegas seleccionadas'}</span>
+                )}
+              </p>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">

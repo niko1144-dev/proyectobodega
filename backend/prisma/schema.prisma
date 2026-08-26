@@ -407,6 +407,7 @@ model PlatformUser {
   department       String?      @default("División Tecnologías de la Información (DTI)")
   branchId         String?
   branch           Branch?      @relation(fields: [branchId], references: [id])
+  assignedBranchIds String[]    @default([])
   isActive         Boolean      @default(true)
   lastLoginAt      DateTime?
   createdAt        DateTime     @default(now())

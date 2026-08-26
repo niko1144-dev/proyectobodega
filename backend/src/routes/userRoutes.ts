@@ -29,28 +29,44 @@ userRouter.get('/', async (req: Request, res: Response): Promise<void> => {
       ];
     }
 
-    const users = await prisma.platformUser.findMany({
-      where,
-      include: { branch: true },
-      orderBy: { createdAt: 'desc' }
-    });
+    const [users, allBranches] = await Promise.all([
+      prisma.platformUser.findMany({
+        where,
+        include: { branch: true },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.branch.findMany({ select: { id: true, name: true, code: true } })
+    ]);
 
-    const formatted = users.map(u => ({
-      id: u.id,
-      rut: u.rut,
-      username: u.username,
-      fullName: u.fullName,
-      email: u.email,
-      role: u.role,
-      jobTitle: u.jobTitle || 'Funcionario ITAM',
-      department: u.department || 'DTI',
-      branchId: u.branchId || '',
-      branchName: u.branch?.name || 'Sucursal Central',
-      isActive: u.isActive,
-      lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : undefined,
-      createdAt: u.createdAt.toISOString(),
-      updatedAt: u.updatedAt.toISOString()
-    }));
+    const branchMap = new Map<string, string>();
+    allBranches.forEach(b => branchMap.set(b.id, b.name));
+
+    const formatted = users.map(u => {
+      const assignedIds = u.assignedBranchIds && u.assignedBranchIds.length > 0 
+        ? u.assignedBranchIds 
+        : (u.branchId ? [u.branchId] : []);
+      
+      const assignedNames = assignedIds.map(id => branchMap.get(id) || id);
+
+      return {
+        id: u.id,
+        rut: u.rut,
+        username: u.username,
+        fullName: u.fullName,
+        email: u.email,
+        role: u.role,
+        jobTitle: u.jobTitle || 'Funcionario ITAM',
+        department: u.department || 'DTI',
+        branchId: u.branchId || (assignedIds[0] || ''),
+        branchName: u.branch?.name || (assignedNames[0] || 'Sucursal Central'),
+        assignedBranchIds: assignedIds,
+        assignedBranchNames: assignedNames,
+        isActive: u.isActive,
+        lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : undefined,
+        createdAt: u.createdAt.toISOString(),
+        updatedAt: u.updatedAt.toISOString()
+      };
+    });
 
     res.json(formatted);
   } catch (error: any) {
@@ -61,7 +77,7 @@ userRouter.get('/', async (req: Request, res: Response): Promise<void> => {
 // Crear nuevo usuario (o autorizar funcionario de Active Directory)
 userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { rut, username, fullName, email, password, role, jobTitle, department, branchId } = req.body;
+    const { rut, username, fullName, email, password, role, jobTitle, department, branchId, assignedBranchIds } = req.body;
 
     if (!rut || !username || !fullName || !email || !role) {
       res.status(400).json({ error: 'RUT, Nombre de Usuario, Nombre Completo, Correo y Rol son obligatorios.' });
@@ -71,6 +87,16 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
     const cleanUsername = String(username).trim().toLowerCase();
     const cleanRut = String(rut).trim();
     const cleanEmail = String(email).trim().toLowerCase();
+
+    // Normalizar lista de bodegas asignadas
+    let branchList: string[] = [];
+    if (Array.isArray(assignedBranchIds)) {
+      branchList = assignedBranchIds.map(String).filter(Boolean);
+    } else if (branchId) {
+      branchList = [String(branchId)];
+    }
+
+    const primaryBranchId = branchList.length > 0 ? branchList[0] : (branchId || null);
 
     // Verificar duplicados
     const existing = await prisma.platformUser.findFirst({
@@ -98,7 +124,8 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
         role: role as PlatformRole,
         jobTitle: jobTitle || 'Funcionario ITAM',
         department: department || 'División Tecnologías de la Información',
-        branchId: branchId || null,
+        branchId: primaryBranchId,
+        assignedBranchIds: branchList,
         isActive: true
       },
       include: { branch: true }
@@ -117,6 +144,7 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
         jobTitle: newUser.jobTitle,
         branchId: newUser.branchId,
         branchName: newUser.branch?.name || 'Sucursal Central',
+        assignedBranchIds: newUser.assignedBranchIds,
         isActive: newUser.isActive,
         createdAt: newUser.createdAt.toISOString()
       }
@@ -130,13 +158,22 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
 userRouter.put('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const id = String(req.params.id);
-    const { fullName, email, role, jobTitle, department, branchId, isActive } = req.body;
+    const { fullName, email, role, jobTitle, department, branchId, assignedBranchIds, isActive } = req.body;
 
     const user = await prisma.platformUser.findUnique({ where: { id } });
     if (!user) {
       res.status(404).json({ error: 'Usuario no encontrado' });
       return;
     }
+
+    let branchList = user.assignedBranchIds;
+    if (Array.isArray(assignedBranchIds)) {
+      branchList = assignedBranchIds.map(String).filter(Boolean);
+    }
+
+    const primaryBranchId = branchList.length > 0 
+      ? branchList[0] 
+      : (branchId !== undefined ? branchId : user.branchId);
 
     const updated = await prisma.platformUser.update({
       where: { id },
@@ -146,7 +183,8 @@ userRouter.put('/:id', async (req: Request, res: Response): Promise<void> => {
         role: role !== undefined ? (role as PlatformRole) : user.role,
         jobTitle: jobTitle !== undefined ? jobTitle : user.jobTitle,
         department: department !== undefined ? department : user.department,
-        branchId: branchId !== undefined ? branchId : user.branchId,
+        branchId: primaryBranchId,
+        assignedBranchIds: branchList,
         isActive: isActive !== undefined ? Boolean(isActive) : user.isActive
       },
       include: { branch: true }

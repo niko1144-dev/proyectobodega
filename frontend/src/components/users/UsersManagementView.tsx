@@ -50,7 +50,7 @@ export const UsersManagementView: React.FC = () => {
   const [formRole, setFormRole] = useState<PlatformRole>('TECNICO_SOPORTE');
   const [formJobTitle, setFormJobTitle] = useState<string>('Técnico Soporte TI');
   const [formDepartment, setFormDepartment] = useState<string>('División Tecnologías de la Información');
-  const [formBranchId, setFormBranchId] = useState<string>('');
+  const [formBranchIds, setFormBranchIds] = useState<string[]>([]);
 
   // Formulario Password Reset
   const [newPasswordInput, setNewPasswordInput] = useState<string>('');
@@ -70,8 +70,8 @@ export const UsersManagementView: React.FC = () => {
     setUsers(u);
     setBranches(b);
     setDirectoryUsers(d);
-    if (b.length > 0 && !formBranchId) {
-      setFormBranchId(b[0].id);
+    if (b.length > 0 && formBranchIds.length === 0) {
+      setFormBranchIds([b[0].id]);
     }
   };
 
@@ -90,7 +90,7 @@ export const UsersManagementView: React.FC = () => {
     setFormRole('TECNICO_SOPORTE');
     setFormJobTitle('Técnico Soporte TI');
     setFormDepartment('División Tecnologías de la Información');
-    if (branches.length > 0) setFormBranchId(branches[0].id);
+    setFormBranchIds(branches.length > 0 ? [branches[0].id] : []);
     setErrorMsg(null);
     setRutError(null);
     setEmailError(null);
@@ -109,6 +109,9 @@ export const UsersManagementView: React.FC = () => {
     setAdSearchQuery('');
     setRutError(null);
     setEmailError(null);
+    if (formBranchIds.length === 0 && branches.length > 0) {
+      setFormBranchIds([branches[0].id]);
+    }
   };
 
   const handleRutChange = (val: string) => {
@@ -160,7 +163,10 @@ export const UsersManagementView: React.FC = () => {
       return;
     }
 
-    const branchToAssign = formBranchId || (branches.length > 0 ? branches[0].id : undefined);
+    if (formBranchIds.length === 0) {
+      setErrorMsg('Debe seleccionar al menos una bodega o sucursal autorizada.');
+      return;
+    }
 
     try {
       await ApiClient.createPlatformUser({
@@ -172,11 +178,12 @@ export const UsersManagementView: React.FC = () => {
         role: formRole,
         jobTitle: formJobTitle.trim() || 'Funcionario ITAM',
         department: formDepartment.trim() || 'División Tecnologías de la Información',
-        branchId: branchToAssign
+        branchId: formBranchIds[0],
+        assignedBranchIds: formBranchIds
       });
 
       setIsCreateModalOpen(false);
-      setFeedbackMsg(`✓ Funcionario ${formFullName} autorizado exitosamente con rol ${formRole}.`);
+      setFeedbackMsg(`✓ Funcionario ${formFullName} autorizado exitosamente con rol ${formRole} (${formBranchIds.length} bodegas asignadas).`);
       loadData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al registrar o autorizar el usuario.');
@@ -207,7 +214,10 @@ export const UsersManagementView: React.FC = () => {
     setFormRole(user.role);
     setFormJobTitle(user.jobTitle || '');
     setFormDepartment(user.department || '');
-    setFormBranchId(user.branchId || (branches.length > 0 ? branches[0].id : ''));
+    const userBranches = user.assignedBranchIds && user.assignedBranchIds.length > 0 
+      ? user.assignedBranchIds 
+      : (user.branchId ? [user.branchId] : (branches.length > 0 ? [branches[0].id] : []));
+    setFormBranchIds(userBranches);
     setErrorMsg(null);
     setEmailError(null);
     setIsEditModalOpen(true);
@@ -228,6 +238,11 @@ export const UsersManagementView: React.FC = () => {
       return;
     }
 
+    if (formBranchIds.length === 0) {
+      setErrorMsg('Debe seleccionar al menos una bodega o sucursal autorizada.');
+      return;
+    }
+
     try {
       await ApiClient.updatePlatformUser(selectedUser.id, {
         fullName: formFullName.trim(),
@@ -235,7 +250,8 @@ export const UsersManagementView: React.FC = () => {
         role: formRole,
         jobTitle: formJobTitle.trim(),
         department: formDepartment.trim(),
-        branchId: formBranchId
+        branchId: formBranchIds[0],
+        assignedBranchIds: formBranchIds
       });
 
       setIsEditModalOpen(false);
@@ -436,11 +452,32 @@ export const UsersManagementView: React.FC = () => {
                       {getRoleBadge(user.role)}
                     </td>
 
-                    {/* Sucursal */}
+                    {/* Bodegas / Sucursales Autorizadas */}
                     <td className="px-3.5 py-3 text-slate-700 font-medium">
-                      <div className="flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-[#003B70]" />
-                        <span>{user.branchName || 'Sucursal Central'}</span>
+                      <div className="space-y-1">
+                        {user.assignedBranchNames && user.assignedBranchNames.length > 0 ? (
+                          user.assignedBranchNames.length === 1 ? (
+                            <div className="flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-[#003B70]" />
+                              <span className="font-semibold">{user.assignedBranchNames[0]}</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5 font-bold text-[#003B70]">
+                                <Building2 className="w-3.5 h-3.5 text-[#003B70]" />
+                                <span>{user.assignedBranchNames[0]}</span>
+                              </div>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200 w-fit" title={user.assignedBranchNames.join(', ')}>
+                                +{user.assignedBranchNames.length - 1} bodegas adicionales
+                              </span>
+                            </div>
+                          )
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-[#003B70]" />
+                            <span>{user.branchName || 'Sucursal Central'}</span>
+                          </div>
+                        )}
                       </div>
                     </td>
 
@@ -518,7 +555,7 @@ export const UsersManagementView: React.FC = () => {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           title="Autorizar / Crear Usuario en la Plataforma"
-          subtitle="Seleccione un funcionario de Active Directory o ingrese datos manuales y asigne su rol de privilegios"
+          subtitle="Seleccione un funcionario de Active Directory o ingrese datos manuales y asigne su rol y bodegas autorizadas"
           maxWidth="2xl"
         >
           <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
@@ -697,20 +734,68 @@ export const UsersManagementView: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Sucursal Asignada *</label>
-                <SearchableSelect
-                  value={formBranchId}
-                  onChange={(val) => setFormBranchId(val)}
-                  options={branches.map(b => ({
-                    value: b.id,
-                    label: b.name,
-                    sublabel: b.region,
-                    badge: b.code
-                  }))}
-                  placeholder="Seleccione sucursal..."
-                  searchPlaceholder="Filtrar sucursal..."
-                />
+              {/* Selector Multi-Bodega */}
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-slate-700 font-bold">Bodegas / Sucursales Autorizadas (1 o varias) *</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormBranchIds(branches.map(b => b.id))}
+                      className="text-[11px] text-[#003B70] font-bold hover:underline"
+                    >
+                      Seleccionar Todas ({branches.length})
+                    </button>
+                    <span className="text-slate-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormBranchIds([])}
+                      className="text-[11px] text-slate-500 font-semibold hover:underline"
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-44 overflow-y-auto">
+                  {branches.map(b => {
+                    const isSelected = formBranchIds.includes(b.id);
+                    return (
+                      <label
+                        key={b.id}
+                        className={`flex items-center gap-2.5 p-2 rounded-lg border cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'bg-blue-50/90 border-[#003B70] text-[#003B70] font-bold shadow-xs' 
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setFormBranchIds(formBranchIds.filter(id => id !== b.id));
+                            } else {
+                              setFormBranchIds([...formBranchIds, b.id]);
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-[#003B70] focus:ring-[#003B70]"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs truncate">{b.name}</div>
+                          <div className="text-[10px] text-slate-400 font-normal">{b.region} • {b.code}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {formBranchIds.length === 0 ? (
+                    <span className="text-red-500 font-semibold">⚠️ Debe seleccionar al menos una bodega o sucursal.</span>
+                  ) : (
+                    <span className="text-emerald-700 font-semibold">✓ <strong>{formBranchIds.length}</strong> {formBranchIds.length === 1 ? 'bodega seleccionada' : 'bodegas seleccionadas'}</span>
+                  )}
+                </p>
               </div>
 
               <div>
@@ -813,23 +898,71 @@ export const UsersManagementView: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Sucursal Asignada</label>
-                <SearchableSelect
-                  value={formBranchId}
-                  onChange={(val) => setFormBranchId(val)}
-                  options={branches.map(b => ({
-                    value: b.id,
-                    label: b.name,
-                    sublabel: b.region,
-                    badge: b.code
-                  }))}
-                  placeholder="Seleccione sucursal..."
-                  searchPlaceholder="Filtrar sucursal..."
-                />
+              {/* Selector Multi-Bodega en Edición */}
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-slate-700 font-bold">Bodegas / Sucursales Autorizadas *</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormBranchIds(branches.map(b => b.id))}
+                      className="text-[11px] text-[#003B70] font-bold hover:underline"
+                    >
+                      Seleccionar Todas ({branches.length})
+                    </button>
+                    <span className="text-slate-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormBranchIds([])}
+                      className="text-[11px] text-slate-500 font-semibold hover:underline"
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-44 overflow-y-auto">
+                  {branches.map(b => {
+                    const isSelected = formBranchIds.includes(b.id);
+                    return (
+                      <label
+                        key={b.id}
+                        className={`flex items-center gap-2.5 p-2 rounded-lg border cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'bg-blue-50/90 border-[#003B70] text-[#003B70] font-bold shadow-xs' 
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setFormBranchIds(formBranchIds.filter(id => id !== b.id));
+                            } else {
+                              setFormBranchIds([...formBranchIds, b.id]);
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-[#003B70] focus:ring-[#003B70]"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs truncate">{b.name}</div>
+                          <div className="text-[10px] text-slate-400 font-normal">{b.region} • {b.code}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {formBranchIds.length === 0 ? (
+                    <span className="text-red-500 font-semibold">⚠️ Debe seleccionar al menos una bodega o sucursal.</span>
+                  ) : (
+                    <span className="text-emerald-700 font-semibold">✓ <strong>{formBranchIds.length}</strong> {formBranchIds.length === 1 ? 'bodega seleccionada' : 'bodegas seleccionadas'}</span>
+                  )}
+                </p>
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-slate-700 font-bold mb-1">Cargo</label>
                 <input
                   type="text"

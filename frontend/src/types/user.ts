@@ -19,6 +19,8 @@ export interface PlatformUser {
   department?: string;
   branchId?: string;
   branchName?: string;
+  assignedBranchIds?: string[];
+  assignedBranchNames?: string[];
   isActive: boolean;
   lastLoginAt?: string;
   createdAt?: string;
