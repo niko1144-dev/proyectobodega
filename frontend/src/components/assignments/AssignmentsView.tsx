@@ -16,7 +16,10 @@ import {
   Shield,
   Lock,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  Mail,
+  Send,
+  CheckCheck
 } from 'lucide-react';
 import { storage } from '../../db/storage';
 import { Asset, Consumable, ConsumableStock } from '../../types/asset';
@@ -25,7 +28,7 @@ import { ADUser } from '../../types/user';
 import { Branch } from '../../types/document';
 import { SignaturePad } from '../common/SignaturePad';
 import { Modal } from '../common/Modal';
-import { formatDate, generateSHA256 } from '../../utils/formatters';
+import { formatDate, generateSHA256, validateEmail } from '../../utils/formatters';
 import { PDFService } from '../../services/pdfService';
 import { ApiClient } from '../../api/client';
 import { AssignmentStatusBadge, PropertyBadge } from '../common/Badge';
@@ -69,6 +72,8 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
   // Modales y Feedback
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState<boolean>(false);
   const [pendingAssignmentDraft, setPendingAssignmentDraft] = useState<Assignment | null>(null);
+  const [receiptEmailInput, setReceiptEmailInput] = useState<string>('');
+  const [signatureModalError, setSignatureModalError] = useState<string | null>(null);
   const [completedAssignment, setCompletedAssignment] = useState<Assignment | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -304,32 +309,42 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
     };
 
     setPendingAssignmentDraft(draft);
+    setReceiptEmailInput(selectedUser.email || '');
+    setSignatureModalError(null);
     setIsSignatureModalOpen(true);
   };
 
   const handleSaveSignatureAndComplete = async (signatureDataUrl?: string) => {
     if (!pendingAssignmentDraft) return;
 
+    const targetEmail = receiptEmailInput.trim();
+    if (!targetEmail || !validateEmail(targetEmail)) {
+      setSignatureModalError('Debe ingresar un correo electrónico válido para el envío del comprobante.');
+      return;
+    }
+
     setIsProcessing(true);
+    setSignatureModalError(null);
     try {
       const hashPayload = `${pendingAssignmentDraft.actNumber}|${pendingAssignmentDraft.recipientRut}|${pendingAssignmentDraft.createdAt}|${signatureDataUrl ? 'DIGITAL' : 'PHYSICAL'}`;
       const hash = await generateSHA256(hashPayload);
 
       const payload = {
         ...pendingAssignmentDraft,
+        recipientEmail: targetEmail,
         signatureDataUrl: signatureDataUrl || undefined,
         signedByName: pendingAssignmentDraft.recipientName,
         digitalSignatureHash: hash
       };
 
       const saved = await ApiClient.createAssignment(payload);
-      const finalAct = saved.assignment || pendingAssignmentDraft;
+      const finalAct = saved.assignment || { ...payload, status: 'FIRMADO_DIGITAL' };
 
       setIsSignatureModalOpen(false);
       setCompletedAssignment(finalAct);
       setSelectedUser(null);
       setSelectedItemsList([]);
-      setObservations('');
+      setObservations('Entrega de equipamiento para puesto de trabajo en módulo de atención.');
       loadData();
 
       // Abrir automáticamente el PDF en el visor nativo / nueva ventana
@@ -339,7 +354,7 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
         console.warn('No se pudo abrir automáticamente la nueva ventana:', pdfErr);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al emitir el acta.');
+      setSignatureModalError(err.message || 'Error al emitir el acta.');
     } finally {
       setIsProcessing(false);
     }
@@ -822,6 +837,44 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
               </ul>
             </div>
 
+            {/* Correo para Envío del Comprobante */}
+            <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#003B70] flex items-center gap-1.5">
+                  <Mail className="w-4 h-4 text-[#003B70]" />
+                  <span>Correo Electrónico para Envío del Comprobante y Acta Oficial *</span>
+                </label>
+                <span className="text-[10px] text-blue-700 font-semibold bg-blue-100/80 px-2 py-0.5 rounded border border-blue-200">
+                  Escribir / Modificar
+                </span>
+              </div>
+
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="email"
+                  value={receiptEmailInput}
+                  onChange={(e) => {
+                    setReceiptEmailInput(e.target.value);
+                    setSignatureModalError(null);
+                  }}
+                  placeholder="Escriba el correo (ej: funcionario@chileatiende.cl o correo personal)..."
+                  className="gov-input pl-9 text-xs sm:text-sm font-semibold"
+                  required
+                />
+              </div>
+              <p className="text-[11px] text-slate-600">
+                Se enviará automáticamente copia del comprobante digital y acta firmada a esta dirección luego de firmar.
+              </p>
+            </div>
+
+            {signatureModalError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-[#E4002B] shrink-0" />
+                <span>{signatureModalError}</span>
+              </div>
+            )}
+
             <div className="space-y-2">
               <span className="font-bold text-slate-900 text-xs">Firma Digital Manuscrita del Funcionario:</span>
               <SignaturePad
@@ -835,7 +888,7 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                 type="button"
                 disabled={isProcessing}
                 onClick={() => handleSaveSignatureAndComplete(undefined)}
-                className="text-slate-600 hover:text-slate-900 underline"
+                className="text-slate-600 hover:text-slate-900 underline font-medium"
               >
                 Emitir sin firma digital (Firmar presencialmente en papel)
               </button>
@@ -871,8 +924,14 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                   ¡Acta Firmada y Guardada Exitosamente!
                 </h4>
                 <p className="text-xs text-emerald-800 leading-relaxed">
-                  El documento oficial en PDF se ha abierto automáticamente en una nueva ventana del visualizador predeterminado de tu dispositivo.
+                  El documento oficial en PDF se ha desplegado automáticamente en una nueva ventana del visualizador predeterminado de tu dispositivo.
                 </p>
+                {completedAssignment.recipientEmail && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-900 font-semibold pt-1">
+                    <Mail className="w-4 h-4 text-emerald-700" />
+                    <span>Comprobante enviado a: <strong>{completedAssignment.recipientEmail}</strong></span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -892,10 +951,14 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                   <strong className="font-mono text-slate-800">{completedAssignment.recipientRut}</strong>
                 </div>
                 <div>
+                  <span className="text-slate-500 block">Correo Comprobante:</span>
+                  <strong className="text-slate-800 break-all">{completedAssignment.recipientEmail || 'No informado'}</strong>
+                </div>
+                <div>
                   <span className="text-slate-500 block">Bodega de Origen:</span>
                   <strong className="text-slate-800">{completedAssignment.branchName}</strong>
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <span className="text-slate-500 block">Total de Bienes Asignados:</span>
                   <strong className="text-emerald-700 font-bold">{completedAssignment.items.length} ítems entregados</strong>
                 </div>
