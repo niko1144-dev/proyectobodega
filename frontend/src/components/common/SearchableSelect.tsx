@@ -139,7 +139,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div 
       ref={containerRef} 
-      className={`relative w-full text-sm select-none ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
+      className={`relative w-full text-sm select-none ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${isOpen ? 'z-[100]' : 'z-10'} ${className}`}
       onKeyDown={handleKeyDown}
     >
       {/* Botón / Input Display */}
@@ -188,7 +188,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
       {/* Dropdown Flotante con Buscador */}
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in duration-100 min-w-[240px]">
+        <div className="absolute z-[9999] left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-100 min-w-[240px]">
           {/* Campo de Búsqueda Integrado */}
           <div className="p-2.5 border-b border-slate-100 bg-slate-50/90">
             <div className="relative flex items-center">

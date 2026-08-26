@@ -678,7 +678,7 @@ export const ReceptionView: React.FC = () => {
           </div>
 
           {/* 2. Documentos de Ingreso */}
-          <div className="gov-card p-4 sm:p-5 space-y-4 overflow-hidden">
+          <div className="gov-card p-4 sm:p-5 space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
               <span className="w-5 h-5 rounded-full bg-[#003B70] text-white flex items-center justify-center text-xs font-bold shrink-0">2</span>
               <h3 className="text-sm font-bold text-slate-800">Documentación Tributaria y Legal</h3>
