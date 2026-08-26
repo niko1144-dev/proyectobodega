@@ -15,7 +15,8 @@ import {
   Layers,
   Shield,
   Lock,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
 import { storage } from '../../db/storage';
 import { Asset, Consumable, ConsumableStock } from '../../types/asset';
@@ -322,12 +323,21 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
       };
 
       const saved = await ApiClient.createAssignment(payload);
+      const finalAct = saved.assignment || pendingAssignmentDraft;
 
       setIsSignatureModalOpen(false);
-      setCompletedAssignment(saved.assignment || pendingAssignmentDraft);
+      setCompletedAssignment(finalAct);
       setSelectedUser(null);
       setSelectedItemsList([]);
+      setObservations('');
       loadData();
+
+      // Abrir automáticamente el PDF en el visor nativo / nueva ventana
+      try {
+        await PDFService.openActPDFInNewWindow(finalAct);
+      } catch (pdfErr) {
+        console.warn('No se pudo abrir automáticamente la nueva ventana:', pdfErr);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al emitir el acta.');
     } finally {
@@ -457,23 +467,23 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                 )}
               </div>
             ) : (
-              <div className="p-4 rounded-xl bg-[#EBF3FA] border border-[#BFDBFE] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-[#003B70] flex items-center justify-center text-white font-extrabold text-sm shadow-sm">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-[#EBF3FA] border border-[#BFDBFE] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 overflow-hidden">
+                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#003B70] flex items-center justify-center text-white font-extrabold text-sm shadow-sm shrink-0">
                     {selectedUser.firstName[0]}{selectedUser.lastName[0]}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-slate-900">{selectedUser.fullName}</h4>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0]">
-                        Funcionario Activo AD
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{selectedUser.fullName}</h4>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0] shrink-0">
+                        Activo AD
                       </span>
                     </div>
-                    <p className="text-xs text-slate-600 mt-0.5">{selectedUser.jobTitle} • {selectedUser.department}</p>
-                    <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-1">
+                    <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5 truncate">{selectedUser.jobTitle} • {selectedUser.department}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600 mt-1">
                       <span>RUT: <strong className="text-slate-900 font-mono">{selectedUser.rut}</strong></span>
-                      <span>Correo: <strong className="text-slate-900">{selectedUser.email}</strong></span>
-                      <span>Sucursal de Asignación: <strong className="text-slate-900">{selectedUser.branchName}</strong></span>
+                      <span>Correo: <strong className="text-slate-900 break-all">{selectedUser.email}</strong></span>
+                      <span>Sucursal: <strong className="text-slate-900">{selectedUser.branchName}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -481,7 +491,7 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                 <button
                   type="button"
                   onClick={() => setSelectedUser(null)}
-                  className="gov-btn-secondary"
+                  className="gov-btn-secondary w-full sm:w-auto shrink-0 text-xs py-2"
                 >
                   Cambiar Funcionario
                 </button>
@@ -490,24 +500,24 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
           </div>
 
           {/* 2. Selección de Bodega de Origen y Bienes */}
-          <div className="gov-card p-5 space-y-5">
+          <div className="gov-card p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-hidden">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-              <span className="w-5 h-5 rounded-full bg-[#003B70] text-white flex items-center justify-center text-xs font-bold">2</span>
+              <span className="w-5 h-5 rounded-full bg-[#003B70] text-white flex items-center justify-center text-xs font-bold shrink-0">2</span>
               <h3 className="text-sm font-bold text-slate-800">Bodega de Origen & Selección de Bienes a Entregar</h3>
             </div>
 
             {/* Selector Destacado de Bodega de Origen con Búsqueda */}
             <div className="p-4 rounded-xl bg-[#003B70] text-white space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <Building2 className="w-5 h-5 text-blue-200 shrink-0" />
-                  <div>
-                    <span className="font-bold text-sm block">Bodega de Origen (Salida y Descuento de Stock Físico) *</span>
-                    <span className="text-[11px] text-blue-100">Seleccione la bodega desde la cual se retirarán físicamente los equipos e insumos</span>
+                  <div className="min-w-0">
+                    <span className="font-bold text-sm block truncate">Bodega de Origen (Salida y Descuento de Stock) *</span>
+                    <span className="text-[11px] text-blue-100 block">Seleccione la bodega física de donde saldrán los equipos e insumos</span>
                   </div>
                 </div>
 
-                <div className="w-64">
+                <div className="w-full sm:w-72 shrink-0">
                   <SearchableSelect
                     value={selectedOriginBranchId}
                     onChange={(val) => handleOriginBranchChange(val)}
@@ -523,10 +533,10 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-1 text-[11px] text-blue-200 border-t border-blue-800/60">
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-blue-200 border-t border-blue-800/60">
                 <span>Bodega activa: <strong className="text-white">{originBranchObj?.name}</strong></span>
                 <span>•</span>
-                <span>Equipos disponibles en esta bodega: <strong className="text-emerald-300">{availableAssetsInBranch.length} unidades</strong></span>
+                <span>Equipos disponibles: <strong className="text-emerald-300">{availableAssetsInBranch.length} unidades</strong></span>
               </div>
             </div>
 
@@ -836,6 +846,90 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                 className="gov-btn-secondary"
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Pop Up Modal de Éxito y Visualización Automática del Acta */}
+      {completedAssignment && (
+        <Modal
+          isOpen={true}
+          onClose={() => setCompletedAssignment(null)}
+          title={`Acta de Entrega ${completedAssignment.actNumber} Emitida`}
+          subtitle="Comprobante oficial generado con código QR institucional y firma registrada"
+          maxWidth="xl"
+        >
+          <div className="space-y-5 text-xs sm:text-sm">
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start gap-3.5">
+              <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1 min-w-0">
+                <h4 className="font-bold text-sm sm:text-base text-emerald-900">
+                  ¡Acta Firmada y Guardada Exitosamente!
+                </h4>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  El documento oficial en PDF se ha abierto automáticamente en una nueva ventana del visualizador predeterminado de tu dispositivo.
+                </p>
+              </div>
+            </div>
+
+            {/* Ficha Resumen */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                <span className="text-xs font-bold text-[#003B70]">Folio Oficial:</span>
+                <span className="font-mono font-extrabold text-slate-900">{completedAssignment.actNumber}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-500 block">Funcionario Receptor:</span>
+                  <strong className="text-slate-800">{completedAssignment.recipientName}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">RUT:</span>
+                  <strong className="font-mono text-slate-800">{completedAssignment.recipientRut}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Bodega de Origen:</span>
+                  <strong className="text-slate-800">{completedAssignment.branchName}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Total de Bienes Asignados:</span>
+                  <strong className="text-emerald-700 font-bold">{completedAssignment.items.length} ítems entregados</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Acciones Principales */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => PDFService.openActPDFInNewWindow(completedAssignment)}
+                className="w-full sm:flex-1 gov-btn-primary bg-[#003B70] hover:bg-[#002A50] py-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>Abrir en Visualizador PDF (Nueva Ventana)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => PDFService.downloadActPDF(completedAssignment)}
+                className="w-full sm:w-auto gov-btn-secondary py-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>Descargar Copia PDF</span>
+              </button>
+            </div>
+
+            <div className="pt-2 text-center border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setCompletedAssignment(null)}
+                className="text-xs font-bold text-slate-500 hover:text-slate-800 underline"
+              >
+                Cerrar y Realizar Nueva Asignación
               </button>
             </div>
           </div>

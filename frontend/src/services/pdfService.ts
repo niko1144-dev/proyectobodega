@@ -254,6 +254,36 @@ export class PDFService {
   }
 
   /**
+   * Genera el Blob URL del PDF del Acta Oficial
+   */
+  public static async getActPDFBlobUrl(assignment: Assignment): Promise<string> {
+    const doc = await this.generateAssignmentActPDF(assignment);
+    const blob = doc.output('blob');
+    return URL.createObjectURL(blob);
+  }
+
+  /**
+   * Abre automáticamente el PDF generado en una nueva ventana/pestaña con el visualizador predeterminado del dispositivo
+   */
+  public static async openActPDFInNewWindow(assignment: Assignment): Promise<string> {
+    const blobUrl = await this.getActPDFBlobUrl(assignment);
+    
+    // Intentar abrir mediante window.open
+    const newWindow = window.open(blobUrl, '_blank');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      // Fallback si el navegador restringe popups directos
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.target = '_blank';
+      link.rel = 'noopener,noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    return blobUrl;
+  }
+
+  /**
    * Abre o descarga el PDF generado
    */
   public static async downloadActPDF(assignment: Assignment): Promise<void> {
