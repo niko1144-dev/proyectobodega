@@ -104,6 +104,16 @@ export class ApiClient {
     }
   }
 
+  public static async deletePlatformUser(id: string): Promise<any> {
+    try {
+      return await fetchJson(`/users/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al eliminar usuario');
+    }
+  }
+
   // --- DASHBOARD ---
   public static async getDashboardMetrics(branchId?: string): Promise<any> {
     try {

@@ -12,9 +12,13 @@ import {
   Lock,
   User,
   Mail,
-  CreditCard
+  CreditCard,
+  Trash2,
+  Server,
+  Sparkles,
+  UserCheck
 } from 'lucide-react';
-import { PlatformUser, PlatformRole } from '../../types/user';
+import { PlatformUser, PlatformRole, ADUser } from '../../types/user';
 import { Branch } from '../../types/document';
 import { Modal } from '../common/Modal';
 import { SearchableSelect } from '../common/SearchableSelect';
@@ -24,6 +28,7 @@ import { ApiClient } from '../../api/client';
 export const UsersManagementView: React.FC = () => {
   const [users, setUsers] = useState<PlatformUser[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [directoryUsers, setDirectoryUsers] = useState<ADUser[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
@@ -34,12 +39,14 @@ export const UsersManagementView: React.FC = () => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null);
 
-  // Formulario Crear Usuario
+  // Formulario Crear / Autorizar Usuario
+  const [adSearchQuery, setAdSearchQuery] = useState<string>('');
+  const [isAdLinked, setIsAdLinked] = useState<boolean>(true);
   const [formRut, setFormRut] = useState<string>('');
   const [formUsername, setFormUsername] = useState<string>('');
   const [formFullName, setFormFullName] = useState<string>('');
   const [formEmail, setFormEmail] = useState<string>('');
-  const [formPassword, setFormPassword] = useState<string>('');
+  const [formPassword, setFormPassword] = useState<string>('AD_AUTHENTICATED');
   const [formRole, setFormRole] = useState<PlatformRole>('TECNICO_SOPORTE');
   const [formJobTitle, setFormJobTitle] = useState<string>('Técnico Soporte TI');
   const [formDepartment, setFormDepartment] = useState<string>('División Tecnologías de la Información');
@@ -55,12 +62,14 @@ export const UsersManagementView: React.FC = () => {
   const [emailError, setEmailError] = useState<string | null>(null);
 
   const loadData = async () => {
-    const [u, b] = await Promise.all([
+    const [u, b, d] = await Promise.all([
       ApiClient.getPlatformUsers(),
-      ApiClient.getBranches()
+      ApiClient.getBranches(),
+      ApiClient.searchDirectoryUsers()
     ]);
     setUsers(u);
     setBranches(b);
+    setDirectoryUsers(d);
     if (b.length > 0 && !formBranchId) {
       setFormBranchId(b[0].id);
     }
@@ -71,11 +80,13 @@ export const UsersManagementView: React.FC = () => {
   }, []);
 
   const handleOpenCreateModal = () => {
+    setAdSearchQuery('');
+    setIsAdLinked(true);
     setFormRut('');
     setFormUsername('');
     setFormFullName('');
     setFormEmail('');
-    setFormPassword('');
+    setFormPassword('AD_AUTHENTICATED');
     setFormRole('TECNICO_SOPORTE');
     setFormJobTitle('Técnico Soporte TI');
     setFormDepartment('División Tecnologías de la Información');
@@ -84,6 +95,20 @@ export const UsersManagementView: React.FC = () => {
     setRutError(null);
     setEmailError(null);
     setIsCreateModalOpen(true);
+  };
+
+  const handleSelectAdUser = (adUser: ADUser) => {
+    setFormFullName(adUser.fullName);
+    setFormRut(adUser.rut || '');
+    setFormUsername(adUser.samAccountName);
+    setFormEmail(adUser.email);
+    setFormJobTitle(adUser.jobTitle || 'Funcionario ITAM');
+    setFormDepartment(adUser.department || 'ChileAtiende / IPS');
+    setFormPassword('AD_AUTHENTICATED');
+    setIsAdLinked(true);
+    setAdSearchQuery('');
+    setRutError(null);
+    setEmailError(null);
   };
 
   const handleRutChange = (val: string) => {
@@ -114,12 +139,7 @@ export const UsersManagementView: React.FC = () => {
     setErrorMsg(null);
 
     // Validaciones
-    const formattedRut = formatRut(formRut.trim());
-    if (!validateRut(formattedRut)) {
-      setErrorMsg('El RUT ingresado no es válido (mínimo 7 caracteres numéricos + dígito verificador).');
-      return;
-    }
-
+    const formattedRut = formRut.trim().length >= 6 ? formatRut(formRut.trim()) : formRut.trim();
     if (!formUsername.trim() || formUsername.trim().length < 3) {
       setErrorMsg('El nombre de usuario debe tener al menos 3 caracteres.');
       return;
@@ -131,12 +151,12 @@ export const UsersManagementView: React.FC = () => {
     }
 
     if (!validateEmail(formEmail.trim())) {
-      setErrorMsg('Debe ingresar un correo electrónico institucional válido (ej: usuario@chileatiende.cl).');
+      setErrorMsg('Debe ingresar un correo electrónico institucional válido (ej: usuario@chileatiende.cl o usuario@ips.gob.cl).');
       return;
     }
 
-    if (!formPassword.trim() || formPassword.trim().length < 6) {
-      setErrorMsg('La contraseña inicial debe tener al menos 6 caracteres.');
+    if (!isAdLinked && (!formPassword.trim() || formPassword.trim().length < 6)) {
+      setErrorMsg('Para cuentas locales, la contraseña inicial debe tener al menos 6 caracteres.');
       return;
     }
 
@@ -144,11 +164,11 @@ export const UsersManagementView: React.FC = () => {
 
     try {
       await ApiClient.createPlatformUser({
-        rut: formattedRut,
+        rut: formattedRut || `USR-${formUsername.trim().toUpperCase()}`,
         username: formUsername.trim().toLowerCase(),
         fullName: formFullName.trim(),
         email: formEmail.trim().toLowerCase(),
-        password: formPassword.trim(),
+        password: isAdLinked ? 'AD_AUTHENTICATED' : formPassword.trim(),
         role: formRole,
         jobTitle: formJobTitle.trim() || 'Funcionario ITAM',
         department: formDepartment.trim() || 'División Tecnologías de la Información',
@@ -156,10 +176,27 @@ export const UsersManagementView: React.FC = () => {
       });
 
       setIsCreateModalOpen(false);
-      setFeedbackMsg(`✓ Usuario ${formFullName} creado exitosamente con rol ${formRole}.`);
+      setFeedbackMsg(`✓ Funcionario ${formFullName} autorizado exitosamente con rol ${formRole}.`);
       loadData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al registrar el usuario.');
+      setErrorMsg(err.message || 'Error al registrar o autorizar el usuario.');
+    }
+  };
+
+  const handleDeleteUser = async (user: PlatformUser) => {
+    if (user.username === 'admin') {
+      alert('La cuenta de Administrador Principal no puede ser eliminada.');
+      return;
+    }
+
+    if (confirm(`¿Confirma que desea revocar todos los permisos y eliminar el acceso de ${user.fullName} (${user.username})?`)) {
+      try {
+        await ApiClient.deletePlatformUser(user.id);
+        setFeedbackMsg(`✓ Acceso revocado y cuenta de ${user.fullName} eliminada exitosamente.`);
+        loadData();
+      } catch (err: any) {
+        alert(`Error al eliminar usuario: ${err.message}`);
+      }
     }
   };
 
@@ -456,6 +493,15 @@ export const UsersManagementView: React.FC = () => {
                         >
                           <ShieldCheck className="w-4 h-4" />
                         </button>
+
+                        <button
+                          onClick={() => handleDeleteUser(user)}
+                          title="Revocar Acceso y Eliminar Cuenta"
+                          disabled={user.username === 'admin'}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -466,13 +512,13 @@ export const UsersManagementView: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL CREAR USUARIO */}
+      {/* MODAL CREAR / AUTORIZAR USUARIO */}
       {isCreateModalOpen && (
         <Modal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          title="Crear Nuevo Usuario de la Plataforma"
-          subtitle="Asignación de credenciales institucionales y rol de privilegios"
+          title="Autorizar / Crear Usuario en la Plataforma"
+          subtitle="Seleccione un funcionario de Active Directory o ingrese datos manuales y asigne su rol de privilegios"
           maxWidth="2xl"
         >
           <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
@@ -483,9 +529,77 @@ export const UsersManagementView: React.FC = () => {
               </div>
             )}
 
+            {/* 1. Buscador Rápido de Funcionarios en Active Directory */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+                  <Server className="w-4 h-4 text-[#003B70]" />
+                  <span>Buscar Funcionario en Active Directory (CHA & IPS)</span>
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">3.409 Funcionarios disponibles</span>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={adSearchQuery}
+                  onChange={(e) => setAdSearchQuery(e.target.value)}
+                  placeholder="Escriba nombre, apellido, RUT o usuario para autocompletar..."
+                  className="gov-input gov-input-with-icon text-xs font-medium"
+                />
+              </div>
+
+              {/* Resultados desplegables si hay búsqueda */}
+              {adSearchQuery.trim().length >= 2 && (
+                <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 bg-white rounded-lg border border-slate-200 shadow-sm mt-1">
+                  {directoryUsers
+                    .filter(u => {
+                      const target = normalizeText(`${u.fullName} ${u.rut || ''} ${u.samAccountName} ${u.email} ${u.department || ''}`);
+                      const words = normalizeText(adSearchQuery).split(/\s+/).filter(Boolean);
+                      return words.every(w => target.includes(w));
+                    })
+                    .slice(0, 8)
+                    .map(adUser => (
+                      <button
+                        type="button"
+                        key={adUser.id || adUser.samAccountName}
+                        onClick={() => handleSelectAdUser(adUser)}
+                        className="w-full text-left p-2.5 hover:bg-[#EBF3FA] flex items-center justify-between transition-colors group"
+                      >
+                        <div>
+                          <div className="font-bold text-slate-900 group-hover:text-[#003B70]">{adUser.fullName}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            {adUser.samAccountName} • {adUser.rut || 'Sin RUT'} • {adUser.email}
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                          Seleccionar
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {isAdLinked && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-emerald-800 text-xs">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Funcionario vinculado a <strong>Active Directory</strong>. La contraseña se valida en red.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAdLinked(false)}
+                  className="text-emerald-700 underline text-[11px] font-semibold hover:text-emerald-900"
+                >
+                  Cambiar a cuenta local
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">RUT Funcionario *</label>
+                <label className="block text-slate-700 font-bold mb-1">RUT Funcionario</label>
                 <div className="relative">
                   <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   <input
@@ -494,14 +608,13 @@ export const UsersManagementView: React.FC = () => {
                     onChange={(e) => handleRutChange(e.target.value)}
                     placeholder="Ej: 16.789.123-4"
                     className={`gov-input gov-input-with-icon font-mono font-bold ${rutError ? 'border-red-400 bg-red-50/20' : ''}`}
-                    required
                   />
                 </div>
                 {rutError && <p className="text-[11px] text-red-600 mt-1">{rutError}</p>}
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Nombre de Usuario (Login) *</label>
+                <label className="block text-slate-700 font-bold mb-1">Nombre de Usuario (Login / sAMAccountName) *</label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   <input
@@ -535,7 +648,7 @@ export const UsersManagementView: React.FC = () => {
                     type="email"
                     value={formEmail}
                     onChange={(e) => handleEmailChange(e.target.value)}
-                    placeholder="nombre.apellido@chileatiende.cl"
+                    placeholder="nombre.apellido@chileatiende.cl o @ips.gob.cl"
                     className={`gov-input gov-input-with-icon ${emailError ? 'border-red-400 bg-red-50/20' : ''}`}
                     required
                   />
@@ -543,23 +656,33 @@ export const UsersManagementView: React.FC = () => {
                 {emailError && <p className="text-[11px] text-red-600 mt-1">{emailError}</p>}
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Contraseña Inicial (mínimo 6 car.) *</label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres..."
-                    className="gov-input gov-input-with-icon font-mono"
-                    required
-                  />
+              {!isAdLinked ? (
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Contraseña Local Inicial (mínimo 6 car.) *</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres..."
+                      className="gov-input gov-input-with-icon font-mono"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Método de Autenticación</label>
+                  <div className="p-2.5 rounded-lg bg-slate-100 text-slate-700 font-medium flex items-center gap-2 border border-slate-200">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Contraseña Active Directory institucional</span>
+                  </div>
+                </div>
+              )}
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Nivel de Privilegios / Rol *</label>
+                <label className="block text-slate-700 font-bold mb-1">Rol y Privilegios en el Sistema *</label>
                 <SearchableSelect
                   value={formRole}
                   onChange={(val) => setFormRole(val as PlatformRole)}
@@ -602,17 +725,18 @@ export const UsersManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Unidad / Departamento</label>
+                <label className="block text-slate-700 font-bold mb-1">Departamento / División</label>
                 <input
                   type="text"
                   value={formDepartment}
                   onChange={(e) => setFormDepartment(e.target.value)}
+                  placeholder="Ej: División Tecnologías de la Información"
                   className="gov-input"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
@@ -624,7 +748,8 @@ export const UsersManagementView: React.FC = () => {
                 type="submit"
                 className="gov-btn-primary"
               >
-                Guardar y Crear Usuario
+                <UserCheck className="w-4 h-4" />
+                <span>Autorizar Usuario</span>
               </button>
             </div>
           </form>

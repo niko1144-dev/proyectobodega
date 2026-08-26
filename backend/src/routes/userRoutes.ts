@@ -58,23 +58,27 @@ userRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Crear nuevo usuario
+// Crear nuevo usuario (o autorizar funcionario de Active Directory)
 userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const { rut, username, fullName, email, password, role, jobTitle, department, branchId } = req.body;
 
-    if (!rut || !username || !fullName || !email || !password || !role) {
-      res.status(400).json({ error: 'RUT, Usuario, Nombre, Correo, Contraseña y Rol son obligatorios.' });
+    if (!rut || !username || !fullName || !email || !role) {
+      res.status(400).json({ error: 'RUT, Nombre de Usuario, Nombre Completo, Correo y Rol son obligatorios.' });
       return;
     }
+
+    const cleanUsername = String(username).trim().toLowerCase();
+    const cleanRut = String(rut).trim();
+    const cleanEmail = String(email).trim().toLowerCase();
 
     // Verificar duplicados
     const existing = await prisma.platformUser.findFirst({
       where: {
         OR: [
-          { rut: String(rut).trim() },
-          { username: String(username).trim() },
-          { email: String(email).trim().toLowerCase() }
+          { rut: cleanRut },
+          { username: cleanUsername },
+          { email: cleanEmail }
         ]
       }
     });
@@ -86,11 +90,11 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
 
     const newUser = await prisma.platformUser.create({
       data: {
-        rut: String(rut).trim(),
-        username: String(username).trim().toLowerCase(),
+        rut: cleanRut,
+        username: cleanUsername,
         fullName: String(fullName).trim(),
-        email: String(email).trim().toLowerCase(),
-        passwordHash: String(password).trim(),
+        email: cleanEmail,
+        passwordHash: password && String(password).trim().length > 0 ? String(password).trim() : 'AD_AUTHENTICATED',
         role: role as PlatformRole,
         jobTitle: jobTitle || 'Funcionario ITAM',
         department: department || 'División Tecnologías de la Información',
@@ -203,5 +207,29 @@ userRouter.patch('/:id/toggle-status', async (req: Request, res: Response): Prom
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Error al cambiar estado del usuario', details: error.message });
+  }
+});
+
+// Eliminar / Revocar acceso de usuario
+userRouter.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const user = await prisma.platformUser.findUnique({ where: { id } });
+
+    if (!user) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+
+    await prisma.platformUser.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: `Permisos de acceso revocados y cuenta de ${user.fullName} eliminada exitosamente.`
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Error al eliminar usuario', details: error.message });
   }
 });

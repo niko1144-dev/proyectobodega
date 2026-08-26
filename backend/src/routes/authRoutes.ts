@@ -33,53 +33,46 @@ authRouter.post('/login', async (req: Request, res: Response): Promise<void> => 
     if (ldapAuthResult && ldapAuthResult.success && ldapAuthResult.user) {
       const ldapUser = ldapAuthResult.user;
 
-      // Buscar o aprovisionar automáticamente el usuario en platformUser
+      // Buscar si el funcionario ha sido autorizado por un Administrador en platformUser
       let user = await prisma.platformUser.findFirst({
         where: {
           OR: [
             { username: { equals: ldapUser.username, mode: 'insensitive' } },
+            { rut: { equals: ldapUser.rut, mode: 'insensitive' } },
             { email: { equals: ldapUser.email, mode: 'insensitive' } }
           ]
         },
         include: { branch: true }
       });
 
+      // Si el usuario pertenece a Active Directory pero NO ha sido dado de alta por el Administrador
       if (!user) {
-        // Aprovisionar nuevo usuario con rol predeterminado de soporte
-        user = await prisma.platformUser.create({
-          data: {
-            username: ldapUser.username.toLowerCase(),
-            rut: ldapUser.rut,
-            fullName: ldapUser.fullName,
-            email: ldapUser.email,
-            passwordHash: 'AD_AUTHENTICATED',
-            role: 'TECNICO_SOPORTE',
-            jobTitle: ldapUser.jobTitle,
-            department: ldapUser.department,
-            isActive: true,
-            lastLoginAt: now
-          },
-          include: { branch: true }
+        res.status(403).json({ 
+          error: `Acceso no autorizado: Su cuenta institucional (${ldapUser.fullName}) es válida en Active Directory (${ldapAuthResult.domainOrigin}), pero no cuenta con permisos asignados para acceder a esta plataforma. Solicite a un Administrador que active y asigne su rol en el módulo de Gestión de Usuarios.` 
         });
-      } else {
-        // Actualizar datos desde Active Directory
-        user = await prisma.platformUser.update({
-          where: { id: user.id },
-          data: {
-            fullName: ldapUser.fullName,
-            email: ldapUser.email,
-            jobTitle: ldapUser.jobTitle,
-            department: ldapUser.department,
-            lastLoginAt: now
-          },
-          include: { branch: true }
-        });
-      }
-
-      if (!user.isActive) {
-        res.status(403).json({ error: 'Esta cuenta de usuario ha sido desactivada por el Administrador. Contacte a la Mesa de Ayuda DTI.' });
         return;
       }
+
+      // Si el usuario está registrado pero se encuentra desactivado
+      if (!user.isActive) {
+        res.status(403).json({ 
+          error: 'Esta cuenta de usuario ha sido desactivada por el Administrador. Contacte a la Mesa de Ayuda DTI.' 
+        });
+        return;
+      }
+
+      // Sincronizar datos actualizados desde Active Directory conservando el rol asignado por el Administrador
+      user = await prisma.platformUser.update({
+        where: { id: user.id },
+        data: {
+          fullName: ldapUser.fullName,
+          email: ldapUser.email,
+          jobTitle: ldapUser.jobTitle || user.jobTitle,
+          department: ldapUser.department || user.department,
+          lastLoginAt: now
+        },
+        include: { branch: true }
+      });
 
       const userProfile = {
         id: user.id,
