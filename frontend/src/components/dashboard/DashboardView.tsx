@@ -184,19 +184,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
           </div>
         </div>
       </div>
+
       {/* 2. GRID DE KPIS Y MÉTRICAS PRINCIPALES */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         
         {/* Card 1: Total Activos TI */}
         <div 
           onClick={() => onNavigate('inventory')}
-          className="gov-card p-5 sm:p-6 space-y-3 cursor-pointer hover:shadow-gov-card hover:-translate-y-0.5 transition-all group border-l-4 border-l-[#003B70] dark:border-l-[#38BDF8]"
+          className="gov-card p-5 sm:p-6 space-y-3 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group border-t-2 border-t-[#003B70] dark:border-t-[#38BDF8]"
         >
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-[#102444] text-[#003B70] dark:text-[#38BDF8] flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs border border-blue-200 dark:border-[#1E3D6B]">
+            <div className="w-12 h-12 rounded-xl bg-[#EBF3FA] dark:bg-[#002A50] text-[#003B70] dark:text-[#38BDF8] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs border border-[#BFDBFE] dark:border-[#38BDF8]/40">
               <Boxes className="w-6 h-6" />
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-blue-50 dark:bg-[#0C2447] text-[#003B70] dark:text-[#60A5FA] font-bold border border-blue-200 dark:border-[#1E4B8A]">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-[#EBF3FA] dark:bg-[#0C2447] text-[#003B70] dark:text-[#60A5FA] font-bold border border-[#BFDBFE] dark:border-[#1E4B8A]">
               Total Activos
             </span>
           </div>
@@ -205,7 +206,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
             <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               {totalAssets}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
               Parque tecnológico registrado
             </p>
           </div>
@@ -213,11 +214,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
           <div className="pt-3 border-t border-slate-100 dark:border-[#1E3352]/60 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
             <div className="flex justify-between font-semibold">
               <span className="text-[#003B70] dark:text-[#38BDF8]">Propios: {ownAssetsCount} ({ownPercentage}%)</span>
-              <span className="text-slate-500 dark:text-slate-400">Arriendo: {leasingAssetsCount}</span>
+              <span className="text-slate-600 dark:text-slate-300 font-medium">Arriendo: {leasingAssetsCount}</span>
             </div>
-            <div className="w-full h-1.5 bg-slate-100 dark:bg-[#0C1729] rounded-full overflow-hidden flex">
-              <div style={{ width: `${ownPercentage}%` }} className="bg-[#003B70] dark:bg-[#0055A5] h-full" />
-              <div style={{ width: `${100 - ownPercentage}%` }} className="bg-amber-500 h-full" />
+            <div className="w-full h-2 bg-slate-100 dark:bg-[#080F1D] rounded-full overflow-hidden flex border border-slate-200 dark:border-[#1E3352]/80">
+              <div style={{ width: `${ownPercentage}%` }} className="bg-gradient-to-r from-[#003B70] to-[#0055A5] dark:from-[#0055A5] dark:to-[#38BDF8] h-full rounded-full" />
+              <div style={{ width: `${100 - ownPercentage}%` }} className="bg-amber-500 h-full rounded-full" />
             </div>
           </div>
         </div>
@@ -225,10 +226,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
         {/* Card 2: Disponibles en Bodega */}
         <div 
           onClick={() => onNavigate('inventory')}
-          className="gov-card p-5 sm:p-6 space-y-3 cursor-pointer hover:shadow-gov-card hover:-translate-y-0.5 transition-all group border-l-4 border-l-emerald-500"
+          className="gov-card p-5 sm:p-6 space-y-3 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group border-t-2 border-t-emerald-600 dark:border-t-emerald-400"
         >
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs border border-emerald-200 dark:border-emerald-700/60">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-[#063323] text-emerald-700 dark:text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs border border-emerald-200 dark:border-emerald-500/40">
               <Laptop className="w-6 h-6" />
             </div>
             <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-700/60">
@@ -240,16 +241,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
             <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               {inWarehouseCount}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
               Listos para entrega y asignación
             </p>
           </div>
 
           <div className="pt-3 border-t border-slate-100 dark:border-[#1E3352]/60 flex items-center justify-between text-xs font-semibold">
-            <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
+            <span className="text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" /> {warehousePercentage}% disponible
             </span>
-            <span className="text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-white transition-colors flex items-center gap-0.5">
+            <span className="text-[#003B70] dark:text-[#38BDF8] group-hover:underline transition-colors flex items-center gap-0.5">
               Ver lista <ArrowRight className="w-3.5 h-3.5" />
             </span>
           </div>
@@ -258,13 +259,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
         {/* Card 3: Activos Asignados */}
         <div 
           onClick={() => onNavigate('assignments')}
-          className="gov-card p-5 sm:p-6 space-y-3 cursor-pointer hover:shadow-gov-card hover:-translate-y-0.5 transition-all group border-l-4 border-l-blue-500"
+          className="gov-card p-5 sm:p-6 space-y-3 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group border-t-2 border-t-blue-600 dark:border-t-cyan-400"
         >
           <div className="flex items-center justify-between">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-indigo-950/80 text-blue-700 dark:text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs border border-blue-200 dark:border-indigo-700/60">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-[#0B3047] text-blue-700 dark:text-[#38BDF8] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs border border-blue-200 dark:border-cyan-500/40">
               <FileCheck2 className="w-6 h-6" />
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-blue-50 dark:bg-indigo-950/80 text-blue-800 dark:text-indigo-300 font-bold border border-blue-200 dark:border-indigo-700/60">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-blue-50 dark:bg-[#0C2447] text-blue-800 dark:text-[#60A5FA] font-bold border border-blue-200 dark:border-[#1E4B8A]">
               Operativos
             </span>
           </div>
@@ -273,14 +274,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
             <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               {assignedCount}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
               Equipos con funcionario a cargo
             </p>
           </div>
 
           <div className="pt-3 border-t border-slate-100 dark:border-[#1E3352]/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 font-semibold">
-            <span className="text-slate-500 dark:text-slate-400">
-              {maintenanceCount > 0 ? `${maintenanceCount} en mantención técnica` : '0 en servicio técnico'}
+            <span className="text-slate-600 dark:text-slate-300">
+              {maintenanceCount > 0 ? `${maintenanceCount} en mantención` : '0 en servicio'}
             </span>
             <span className="text-[#003B70] dark:text-[#38BDF8] group-hover:underline flex items-center gap-0.5">
               Actas <ArrowRight className="w-3.5 h-3.5" />
@@ -291,22 +292,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
         {/* Card 4: Contratos de Arriendo & Vencimientos */}
         <div 
           onClick={() => onNavigate('settings')}
-          className={`gov-card p-5 sm:p-6 space-y-3 cursor-pointer hover:shadow-gov-card hover:-translate-y-0.5 transition-all group border-l-4 ${
-            expiringContracts.length > 0 ? 'border-l-amber-500' : 'border-l-slate-400 dark:border-l-slate-600'
-          }`}
+          className="gov-card p-5 sm:p-6 space-y-3 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group border-t-2 border-t-amber-500 dark:border-t-amber-400"
         >
           <div className="flex items-center justify-between">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs border ${
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs border ${
               expiringContracts.length > 0 
-                ? 'bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-700/60' 
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                ? 'bg-amber-50 dark:bg-[#352008] text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/40' 
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
             }`}>
               <Clock className="w-6 h-6" />
             </div>
             <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${
               expiringContracts.length > 0 
                 ? 'bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-700/60' 
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
             }`}>
               {expiringContracts.length > 0 ? 'Atención' : 'Al Día'}
             </span>
@@ -316,13 +315,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
             <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               {expiringContracts.length}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
               {expiringContracts.length > 0 ? 'Arriendos por vencer (<60 días)' : 'Todos los contratos vigentes'}
             </p>
           </div>
 
           <div className="pt-3 border-t border-slate-100 dark:border-[#1E3352]/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 font-semibold">
-            <span className={expiringContracts.length > 0 ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-slate-500 dark:text-slate-400'}>
+            <span className={expiringContracts.length > 0 ? 'text-amber-700 dark:text-amber-300 font-bold' : 'text-slate-600 dark:text-slate-300'}>
               {contracts.length} contratos totales
             </span>
             <span className="text-[#003B70] dark:text-[#38BDF8] group-hover:underline flex items-center gap-0.5">
@@ -338,53 +337,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
         
         <div
           onClick={() => onNavigate('assignments')}
-          className="gov-card p-4 flex items-center gap-3 cursor-pointer hover:border-[#003B70] dark:hover:border-[#38BDF8] hover:shadow-md transition-all group"
+          className="gov-card p-4 flex items-center gap-3.5 cursor-pointer hover:border-[#003B70] dark:hover:border-[#38BDF8] hover:shadow-lg dark:hover:shadow-[#38BDF8]/10 hover:-translate-y-0.5 transition-all duration-200 group"
         >
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-[#102444] text-[#003B70] dark:text-[#38BDF8] flex items-center justify-center shrink-0 group-hover:bg-[#003B70] group-hover:text-white transition-colors border border-blue-200 dark:border-[#1E3D6B]">
+          <div className="w-11 h-11 rounded-xl bg-[#EBF3FA] dark:bg-[#002A50] text-[#003B70] dark:text-[#38BDF8] flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-[#003B70] group-hover:text-white dark:group-hover:bg-[#38BDF8] dark:group-hover:text-slate-900 transition-all border border-[#BFDBFE] dark:border-[#38BDF8]/40 shadow-xs">
             <FileCheck2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white truncate">Asignar Equipos</h4>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Generar acta oficial</p>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-[#003B70] dark:group-hover:text-[#38BDF8] transition-colors">Asignar Equipos</h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-300 truncate">Generar acta oficial</p>
           </div>
         </div>
 
         <div
           onClick={() => onNavigate('reception')}
-          className="gov-card p-4 flex items-center gap-3 cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all group"
+          className="gov-card p-4 flex items-center gap-3.5 cursor-pointer hover:border-emerald-500 hover:shadow-lg dark:hover:shadow-emerald-500/10 hover:-translate-y-0.5 transition-all duration-200 group"
         >
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:bg-emerald-700 group-hover:text-white transition-colors border border-emerald-200 dark:border-emerald-700/60">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-[#063323] text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white dark:group-hover:bg-emerald-400 dark:group-hover:text-slate-900 transition-all border border-emerald-200 dark:border-emerald-500/40 shadow-xs">
             <PackageCheck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white truncate">Recepción OC</h4>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Ingreso de hardware</p>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">Recepción OC</h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-300 truncate">Ingreso de hardware</p>
           </div>
         </div>
 
         <div
           onClick={() => onNavigate('consumables')}
-          className="gov-card p-4 flex items-center gap-3 cursor-pointer hover:border-purple-500 hover:shadow-md transition-all group"
+          className="gov-card p-4 flex items-center gap-3.5 cursor-pointer hover:border-purple-500 hover:shadow-lg dark:hover:shadow-purple-500/10 hover:-translate-y-0.5 transition-all duration-200 group"
         >
-          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:bg-purple-700 group-hover:text-white transition-colors border border-purple-200 dark:border-purple-700/60">
+          <div className="w-11 h-11 rounded-xl bg-purple-50 dark:bg-[#2A1245] text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white dark:group-hover:bg-purple-400 dark:group-hover:text-slate-900 transition-all border border-purple-200 dark:border-purple-500/40 shadow-xs">
             <Layers className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white truncate">Insumos y Stock</h4>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Bodega de repuestos</p>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">Insumos y Stock</h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-300 truncate">Bodega de repuestos</p>
           </div>
         </div>
 
         <div
           onClick={() => onNavigate('directory')}
-          className="gov-card p-4 flex items-center gap-3 cursor-pointer hover:border-cyan-500 hover:shadow-md transition-all group"
+          className="gov-card p-4 flex items-center gap-3.5 cursor-pointer hover:border-cyan-500 hover:shadow-lg dark:hover:shadow-cyan-500/10 hover:-translate-y-0.5 transition-all duration-200 group"
         >
-          <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 flex items-center justify-center shrink-0 group-hover:bg-cyan-700 group-hover:text-white transition-colors border border-cyan-200 dark:border-cyan-700/60">
+          <div className="w-11 h-11 rounded-xl bg-cyan-50 dark:bg-[#0B3047] text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-cyan-600 group-hover:text-white dark:group-hover:bg-cyan-400 dark:group-hover:text-slate-900 transition-all border border-cyan-200 dark:border-cyan-500/40 shadow-xs">
             <Users2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white truncate">Directorio AD</h4>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">3400+ Funcionarios</p>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">Directorio AD</h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-300 truncate">3400+ Funcionarios</p>
           </div>
         </div>
 
@@ -397,15 +396,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
         <div className="gov-card p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-[#1E3352]/60">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-[#102444] text-[#003B70] dark:text-[#38BDF8] flex items-center justify-center border border-blue-200 dark:border-[#1E3D6B]">
+              <div className="w-10 h-10 rounded-xl bg-[#EBF3FA] dark:bg-[#002A50] text-[#003B70] dark:text-[#38BDF8] flex items-center justify-center border border-[#BFDBFE] dark:border-[#38BDF8]/40 shadow-xs">
                 <Laptop className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Distribución por Tipo de Hardware</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Composición del inventario informático</p>
+                <p className="text-xs text-slate-500 dark:text-slate-300 font-medium">Composición del inventario informático</p>
               </div>
             </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352]">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 dark:bg-[#0C1729] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#1E3352]">
               {Object.keys(typesDistribution).length} Tipologías
             </span>
           </div>
@@ -416,25 +415,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
             ) : (
               Object.entries(typesDistribution).map(([typeName, count], idx) => {
                 const percentage = Math.round((count / (totalAssets || 1)) * 100);
-                const colorPalette = [
-                  'bg-[#003B70] dark:bg-[#38BDF8]',
-                  'bg-emerald-500',
-                  'bg-indigo-500',
-                  'bg-amber-500',
-                  'bg-purple-500',
-                  'bg-cyan-500'
+                const colorGradients = [
+                  'bg-gradient-to-r from-[#003B70] to-[#0055A5] dark:from-[#0055A5] dark:to-[#38BDF8]',
+                  'bg-gradient-to-r from-emerald-600 to-emerald-400 dark:from-emerald-600 dark:to-emerald-400',
+                  'bg-gradient-to-r from-indigo-600 to-blue-400 dark:from-indigo-500 dark:to-cyan-400',
+                  'bg-gradient-to-r from-amber-600 to-amber-400 dark:from-amber-500 dark:to-amber-300',
+                  'bg-gradient-to-r from-purple-600 to-purple-400 dark:from-purple-500 dark:to-pink-400',
+                  'bg-gradient-to-r from-cyan-600 to-teal-400 dark:from-cyan-500 dark:to-teal-300'
                 ];
-                const barColor = colorPalette[idx % colorPalette.length];
+                const barColor = colorGradients[idx % colorGradients.length];
 
                 return (
                   <div key={typeName} className="space-y-1.5">
                     <div className="flex justify-between text-xs sm:text-sm">
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">{typeName}</span>
-                      <span className="font-mono font-bold text-slate-900 dark:text-white">{count} un. <span className="text-slate-500 dark:text-slate-400 font-normal">({percentage}%)</span></span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-100">{typeName}</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">{count} un. <span className="text-[#003B70] dark:text-[#38BDF8] font-bold">({percentage}%)</span></span>
                     </div>
-                    <div className="w-full h-2.5 bg-slate-100 dark:bg-[#0C1729] rounded-full overflow-hidden border border-slate-200 dark:border-[#1E3352]/40">
+                    <div className="w-full h-2.5 bg-slate-100 dark:bg-[#080F1D] rounded-full overflow-hidden border border-slate-200 dark:border-[#1E3352]">
                       <div
-                        className={`h-full ${barColor} rounded-full transition-all duration-500`}
+                        className={`h-full ${barColor} rounded-full transition-all duration-500 shadow-xs`}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -449,12 +448,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
         <div className="gov-card p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-[#1E3352]/60">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/80 text-[#E4002B] dark:text-[#F87171] flex items-center justify-center border border-red-200 dark:border-red-700/60">
+              <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/80 text-[#E4002B] dark:text-[#F87171] flex items-center justify-center border border-red-200 dark:border-red-700/60 shadow-xs">
                 <ShieldAlert className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Alertas de Stock & Vencimientos</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Notificaciones prioritarias para gestión de bodega</p>
+                <p className="text-xs text-slate-500 dark:text-slate-300 font-medium">Notificaciones prioritarias para gestión de bodega</p>
               </div>
             </div>
             <span className="text-xs font-bold px-3 py-1 rounded-full bg-red-50 dark:bg-red-950/80 text-red-700 dark:text-[#F87171] border border-red-200 dark:border-red-700/60">
@@ -462,7 +461,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
             </span>
           </div>
 
-          <div className="space-y-3 pt-1">
+          <div className="space-y-2.5 pt-1">
             {expiringContracts.length === 0 && criticalStockItems.length === 0 ? (
               <div className="py-8 text-center text-slate-400 space-y-2">
                 <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-500 dark:text-emerald-400" />
@@ -473,21 +472,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
               <>
                 {/* Contratos por vencer */}
                 {expiringContracts.map(c => (
-                  <div key={c.id} className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between gap-3 text-xs">
+                  <div key={c.id} className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0D182B] hover:bg-slate-100 dark:hover:bg-[#14233C] border border-slate-200 dark:border-[#1E3352] flex items-center justify-between gap-3 text-xs transition-colors">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 dark:text-white">{c.contractNumber}</span>
                         <span className="font-semibold text-slate-600 dark:text-slate-300">({c.supplierName})</span>
                       </div>
-                      <p className="text-slate-600 dark:text-slate-300 mt-0.5">{c.name}</p>
+                      <p className="text-slate-600 dark:text-slate-300 mt-0.5 font-medium">{c.name}</p>
                       <div className="text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-                        <span>Vence: <strong className="text-amber-800 dark:text-amber-300">{formatDate(c.endDate)}</strong></span>
+                        <span>Vence: <strong className="text-amber-700 dark:text-amber-300">{formatDate(c.endDate)}</strong></span>
                         <span>•</span>
-                        <span>{c.linkedAssetsCount} equipos asociados</span>
+                        <span>{c.linkedAssetsCount} equipos</span>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <span className="px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-600/70">
+                      <span className="px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-700/60 shadow-xs">
                         {c.daysLeft} días
                       </span>
                     </div>
@@ -496,7 +495,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
 
                 {/* Insumos bajo stock */}
                 {criticalStockItems.map((item: any) => (
-                  <div key={item.id} className="p-3.5 rounded-xl bg-red-50/70 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center justify-between gap-3 text-xs">
+                  <div key={item.id} className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0D182B] hover:bg-slate-100 dark:hover:bg-[#14233C] border border-slate-200 dark:border-[#1E3352] flex items-center justify-between gap-3 text-xs transition-colors">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 dark:text-white">{item.consumableName}</span>
@@ -524,7 +523,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 border-b border-slate-100 dark:border-[#1E3352]/60">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Actividad y Trazabilidad Reciente</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Registro inmutable de movimientos, asignaciones y cambios de estado</p>
+            <p className="text-xs text-slate-500 dark:text-slate-300 font-medium">Registro inmutable de movimientos, asignaciones y cambios de estado</p>
           </div>
 
           <button
@@ -535,7 +534,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {auditLogs.length === 0 ? (
             <p className="text-sm text-slate-400 py-6 text-center">No hay registros recientes de trazabilidad.</p>
           ) : (
@@ -556,7 +555,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{log.changeReason}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5">{log.changeReason}</p>
                   </div>
                 </div>
 
