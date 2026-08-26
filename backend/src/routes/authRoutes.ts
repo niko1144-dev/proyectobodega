@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/db.js';
+import { LdapService } from '../services/ldapService.js';
 
 export const authRouter = Router();
 
-// Iniciar Sesión (Validación de credenciales)
+// Iniciar Sesión (Validación de credenciales con cascada Active Directory / LDAP y fallback local)
 authRouter.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { identifier, password } = req.body;
@@ -14,9 +15,100 @@ authRouter.post('/login', async (req: Request, res: Response): Promise<void> => 
     }
 
     const cleanId = String(identifier).trim().toLowerCase();
+    const now = new Date();
 
-    // Búsqueda por username, rut o email
-    const user = await prisma.platformUser.findFirst({
+    // 1. Intentar autenticación contra Active Directory (ChileAtiende con fallback IPS)
+    const isLdapEnabled = process.env.LDAP_ENABLED !== 'false';
+    let ldapAuthResult: any = null;
+
+    if (isLdapEnabled) {
+      try {
+        ldapAuthResult = await LdapService.authenticateUser(cleanId, password);
+      } catch (ldapErr: any) {
+        console.warn('[Auth] Error durante intento de autenticación LDAP:', ldapErr.message);
+      }
+    }
+
+    // Si la autenticación en Active Directory fue exitosa
+    if (ldapAuthResult && ldapAuthResult.success && ldapAuthResult.user) {
+      const ldapUser = ldapAuthResult.user;
+
+      // Buscar o aprovisionar automáticamente el usuario en platformUser
+      let user = await prisma.platformUser.findFirst({
+        where: {
+          OR: [
+            { username: { equals: ldapUser.username, mode: 'insensitive' } },
+            { email: { equals: ldapUser.email, mode: 'insensitive' } }
+          ]
+        },
+        include: { branch: true }
+      });
+
+      if (!user) {
+        // Aprovisionar nuevo usuario con rol predeterminado de soporte
+        user = await prisma.platformUser.create({
+          data: {
+            username: ldapUser.username.toLowerCase(),
+            rut: ldapUser.rut,
+            fullName: ldapUser.fullName,
+            email: ldapUser.email,
+            passwordHash: 'AD_AUTHENTICATED',
+            role: 'TECNICO_SOPORTE',
+            jobTitle: ldapUser.jobTitle,
+            department: ldapUser.department,
+            isActive: true,
+            lastLoginAt: now
+          },
+          include: { branch: true }
+        });
+      } else {
+        // Actualizar datos desde Active Directory
+        user = await prisma.platformUser.update({
+          where: { id: user.id },
+          data: {
+            fullName: ldapUser.fullName,
+            email: ldapUser.email,
+            jobTitle: ldapUser.jobTitle,
+            department: ldapUser.department,
+            lastLoginAt: now
+          },
+          include: { branch: true }
+        });
+      }
+
+      if (!user.isActive) {
+        res.status(403).json({ error: 'Esta cuenta de usuario ha sido desactivada por el Administrador. Contacte a la Mesa de Ayuda DTI.' });
+        return;
+      }
+
+      const userProfile = {
+        id: user.id,
+        rut: user.rut,
+        username: user.username,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        jobTitle: user.jobTitle || ldapUser.jobTitle,
+        department: user.department || ldapUser.department,
+        branchId: user.branchId || '',
+        branchName: user.branch?.name || 'Dirección Nacional DTI',
+        isActive: user.isActive,
+        lastLoginAt: now.toISOString(),
+        authSource: `Active Directory (${ldapAuthResult.domainOrigin})`
+      };
+
+      res.json({
+        success: true,
+        message: `Bienvenido(a), ${user.fullName} (${ldapAuthResult.domainOrigin === 'CHILEATIENDE' ? 'ChileAtiende' : 'IPS'})`,
+        user: userProfile,
+        domainOrigin: ldapAuthResult.domainOrigin,
+        token: `session-${user.id}-${Date.now()}`
+      });
+      return;
+    }
+
+    // 2. Fallback: Autenticación Local en Base de Datos (para administradores o contingencia)
+    const localUser = await prisma.platformUser.findFirst({
       where: {
         OR: [
           { username: { equals: cleanId, mode: 'insensitive' } },
@@ -27,49 +119,52 @@ authRouter.post('/login', async (req: Request, res: Response): Promise<void> => 
       include: { branch: true }
     });
 
-    if (!user) {
-      res.status(401).json({ error: 'Credenciales inválidas. Usuario no encontrado en el sistema.' });
+    if (!localUser) {
+      const authMessage = ldapAuthResult && ldapAuthResult.message 
+        ? ldapAuthResult.message 
+        : 'Credenciales inválidas. Usuario no encontrado en los directorios Active Directory ni en el sistema local.';
+      res.status(401).json({ error: authMessage });
       return;
     }
 
-    if (!user.isActive) {
+    if (!localUser.isActive) {
       res.status(403).json({ error: 'Esta cuenta de usuario ha sido desactivada por el Administrador. Contacte a la Mesa de Ayuda DTI.' });
       return;
     }
 
-    // Validación de contraseña (en producción se usa bcrypt; aquí validamos el hash o coincidencia)
-    if (user.passwordHash !== password && password !== 'chileatiende2026') {
+    // Validación de contraseña local (o clave maestra para soporte)
+    const isPasswordValid = localUser.passwordHash === password || password === 'chileatiende2026';
+    if (!isPasswordValid) {
       res.status(401).json({ error: 'Contraseña incorrecta. Verifique sus datos.' });
       return;
     }
 
-    // Actualizar última fecha de inicio de sesión
-    const now = new Date();
     await prisma.platformUser.update({
-      where: { id: user.id },
+      where: { id: localUser.id },
       data: { lastLoginAt: now }
     });
 
     const userProfile = {
-      id: user.id,
-      rut: user.rut,
-      username: user.username,
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-      jobTitle: user.jobTitle || 'Funcionario ITAM',
-      department: user.department || 'DTI ChileAtiende',
-      branchId: user.branchId || '',
-      branchName: user.branch?.name || 'Sucursal Central',
-      isActive: user.isActive,
-      lastLoginAt: now.toISOString()
+      id: localUser.id,
+      rut: localUser.rut,
+      username: localUser.username,
+      fullName: localUser.fullName,
+      email: localUser.email,
+      role: localUser.role,
+      jobTitle: localUser.jobTitle || 'Funcionario ITAM',
+      department: localUser.department || 'DTI ChileAtiende',
+      branchId: localUser.branchId || '',
+      branchName: localUser.branch?.name || 'Sucursal Central',
+      isActive: localUser.isActive,
+      lastLoginAt: now.toISOString(),
+      authSource: 'Base de Datos Local'
     };
 
     res.json({
       success: true,
-      message: `Bienvenido(a), ${user.fullName}`,
+      message: `Bienvenido(a), ${localUser.fullName}`,
       user: userProfile,
-      token: `session-${user.id}-${Date.now()}`
+      token: `session-${localUser.id}-${Date.now()}`
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Error durante la autenticación', details: error.message });
