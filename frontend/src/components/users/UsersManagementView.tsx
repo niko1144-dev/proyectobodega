@@ -316,15 +316,15 @@ export const UsersManagementView: React.FC = () => {
   const getRoleBadge = (role: PlatformRole) => {
     switch (role) {
       case 'ADMIN_TI':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-[#003B70] text-white">ADMINISTRADOR DTI</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-gradient-to-r from-[#003B70] to-[#0055A5] text-white border border-[#38BDF8]/40 shadow-xs">ADMIN DTI</span>;
       case 'ENCARGADO_BODEGA':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-blue-50 text-blue-800 border border-blue-200">JEFE DE BODEGA</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-[#0C2447] text-[#60A5FA] border border-[#1E4B8A]">JEFE DE BODEGA</span>;
       case 'TECNICO_SOPORTE':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">TÉCNICO SOPORTE</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-950/80 text-emerald-300 border border-emerald-700/60">TÉCNICO SOPORTE</span>;
       case 'AUDITOR_CONSULTOR':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-purple-50 text-purple-800 border border-purple-200">AUDITOR / CGR</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-purple-950/80 text-purple-300 border border-purple-700/60">AUDITOR / CGR</span>;
       default:
-        return <span className="px-2 py-0.5 text-xs rounded bg-slate-100 text-slate-700">{role}</span>;
+        return <span className="px-2 py-0.5 text-xs rounded bg-slate-800 text-slate-300 border border-slate-700">{role}</span>;
     }
   };
 
@@ -333,8 +333,8 @@ export const UsersManagementView: React.FC = () => {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#003B70] tracking-tight">Mantenedor de Usuarios & Roles (RBAC)</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">Mantenedor de Usuarios & Roles (RBAC)</h1>
+          <p className="text-xs text-slate-400 mt-0.5">
             Administración de cuentas con acceso a la plataforma ITAM y asignación de niveles de privilegio
           </p>
         </div>
@@ -349,12 +349,12 @@ export const UsersManagementView: React.FC = () => {
       </div>
 
       {feedbackMsg && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-700/60 text-emerald-200 text-xs flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span className="font-semibold">{feedbackMsg}</span>
           </div>
-          <button onClick={() => setFeedbackMsg(null)} className="text-emerald-800 font-bold hover:underline">
+          <button onClick={() => setFeedbackMsg(null)} className="text-emerald-300 font-bold hover:underline">
             Cerrar
           </button>
         </div>
@@ -364,7 +364,7 @@ export const UsersManagementView: React.FC = () => {
       <div className="gov-card p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
           <div className="lg:col-span-2 relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
             <input
               type="text"
               value={searchTerm}
@@ -414,7 +414,7 @@ export const UsersManagementView: React.FC = () => {
       <div className="gov-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#003B70] text-white select-none">
+            <thead className="bg-gradient-to-r from-[#002D57] to-[#003B70] text-white select-none border-b border-[#1E3352]">
               <tr>
                 <th className="px-3.5 py-3 font-bold">Usuario / RUT</th>
                 <th className="px-3.5 py-3 font-bold">Nombre Completo</th>
@@ -425,26 +425,26 @@ export const UsersManagementView: React.FC = () => {
                 <th className="px-3.5 py-3 text-right font-bold">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+            <tbody className="divide-y divide-[#1E3352]/50 bg-[#101C30] text-slate-300">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">
+                  <td colSpan={7} className="p-8 text-center text-slate-500">
                     No se encontraron usuarios con los filtros aplicados.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={user.id} className="hover:bg-[#162744] transition-colors">
                     {/* Usuario & RUT */}
                     <td className="px-3.5 py-3 font-mono">
-                      <div className="font-bold text-slate-900">{user.username}</div>
-                      <div className="text-[11px] text-[#003B70] font-semibold">{user.rut}</div>
+                      <div className="font-bold text-white">{user.username}</div>
+                      <div className="text-[11px] text-[#38BDF8] font-semibold">{user.rut}</div>
                     </td>
 
                     {/* Nombre y Cargo */}
                     <td className="px-3.5 py-3">
-                      <div className="font-bold text-slate-900">{user.fullName}</div>
-                      <div className="text-[11px] text-slate-500">{user.jobTitle}</div>
+                      <div className="font-bold text-white">{user.fullName}</div>
+                      <div className="text-[11px] text-slate-400">{user.jobTitle}</div>
                     </td>
 
                     {/* Rol */}

@@ -201,12 +201,12 @@ export const DirectoryView: React.FC = () => {
       </div>
 
       {feedbackBanner && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between shadow-xs">
+        <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-700/60 text-emerald-200 text-xs flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span className="font-semibold">{feedbackBanner}</span>
           </div>
-          <button onClick={() => setFeedbackBanner(null)} className="text-emerald-800 font-bold hover:underline">
+          <button onClick={() => setFeedbackBanner(null)} className="text-emerald-300 font-bold hover:underline">
             Cerrar
           </button>
         </div>
@@ -215,7 +215,7 @@ export const DirectoryView: React.FC = () => {
       {/* Barra de Búsqueda y Filtros de Acceso */}
       <div className="gov-card p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-xl w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
@@ -226,22 +226,22 @@ export const DirectoryView: React.FC = () => {
         </div>
 
         {/* Filtros de Acceso */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
+        <div className="flex items-center gap-1.5 p-1 bg-[#0C1729] border border-[#1E3352] rounded-lg text-xs font-semibold">
           <button
             onClick={() => { setAccessFilter('ALL'); setCurrentPage(1); }}
-            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'ALL' ? 'bg-white text-[#003B70] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'ALL' ? 'bg-[#003B70] text-white shadow-xs font-bold' : 'text-slate-400 hover:text-slate-200'}`}
           >
             Todos ({users.length})
           </button>
           <button
             onClick={() => { setAccessFilter('AUTHORIZED'); setCurrentPage(1); }}
-            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'AUTHORIZED' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'AUTHORIZED' ? 'bg-emerald-900 text-emerald-200 shadow-xs font-bold border border-emerald-700/60' : 'text-slate-400 hover:text-slate-200'}`}
           >
             Con Acceso Plataforma ({platformUsers.length})
           </button>
           <button
             onClick={() => { setAccessFilter('PENDING'); setCurrentPage(1); }}
-            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'PENDING' ? 'bg-white text-amber-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-3 py-1.5 rounded-md transition-all ${accessFilter === 'PENDING' ? 'bg-amber-900 text-amber-200 shadow-xs font-bold border border-amber-700/60' : 'text-slate-400 hover:text-slate-200'}`}
           >
             Sin Acceso
           </button>
@@ -251,10 +251,10 @@ export const DirectoryView: React.FC = () => {
       {/* Grid de Funcionarios */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {paginatedUsers.length === 0 ? (
-          <div className="col-span-full p-12 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
-            <Users2 className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-base font-bold text-slate-600">No se encontraron funcionarios con el criterio de búsqueda</p>
-            <p className="text-xs text-slate-400 mt-1">Intente buscando por nombre, RUT (ej: 13108837-K) o usuario institucional</p>
+          <div className="col-span-full p-12 text-center text-slate-400 bg-[#101C30] rounded-xl border border-[#1E3352]">
+            <Users2 className="w-12 h-12 mx-auto text-slate-500 mb-3" />
+            <p className="text-base font-bold text-slate-200">No se encontraron funcionarios con el criterio de búsqueda</p>
+            <p className="text-xs text-slate-500 mt-1">Intente buscando por nombre, RUT (ej: 13108837-K) o usuario institucional</p>
           </div>
         ) : (
           paginatedUsers.map(user => {
@@ -272,21 +272,21 @@ export const DirectoryView: React.FC = () => {
             return (
               <div
                 key={user.id || user.samAccountName}
-                className={`gov-card p-5 space-y-4 hover:shadow-gov-card transition-all flex flex-col justify-between border ${pUser ? 'border-emerald-200 bg-emerald-50/10' : 'border-slate-200'}`}
+                className={`gov-card p-5 space-y-4 hover:shadow-gov-card transition-all flex flex-col justify-between border ${pUser ? 'border-emerald-700/60 bg-[#0E261E]/30' : 'border-[#1E3352]'}`}
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-[#003B70] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#003B70] to-[#0055A5] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0 border border-[#38BDF8]/30">
                         {initials}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 leading-tight truncate">{user.fullName}</h3>
-                        <p className="text-xs text-slate-500 truncate mt-0.5">{user.jobTitle || 'Funcionario'}</p>
+                        <h3 className="text-sm font-bold text-white leading-tight truncate">{user.fullName}</h3>
+                        <p className="text-xs text-slate-400 truncate mt-0.5">{user.jobTitle || 'Funcionario'}</p>
                       </div>
                     </div>
 
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border shrink-0 ${isIps ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border shrink-0 ${isIps ? 'bg-[#0C2447] text-[#60A5FA] border-[#1E4B8A]' : 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'}`}>
                       {isIps ? 'ips.gob.cl' : 'cha.cl'}
                     </span>
                   </div>
@@ -302,21 +302,21 @@ export const DirectoryView: React.FC = () => {
                         {getRoleBadge(pUser.role)}
                       </div>
                     ) : (
-                      <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-slate-400" />
+                      <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                        <Lock className="w-3 h-3 text-slate-500" />
                         <span>Sin acceso a plataforma</span>
                       </span>
                     )}
 
                     {pUser ? (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700/60">
                         ✓ Autorizado
                       </span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleOpenAuthorizeModal(user)}
-                        className="text-[11px] font-bold text-[#003B70] hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md border border-blue-200 transition-colors flex items-center gap-1"
+                        className="text-[11px] font-bold text-[#38BDF8] hover:text-white bg-[#102444] hover:bg-[#16335E] px-2.5 py-1 rounded-md border border-[#1E3D6B] transition-colors flex items-center gap-1 shadow-xs"
                       >
                         <UserPlus className="w-3.5 h-3.5" />
                         <span>Autorizar</span>
@@ -324,42 +324,40 @@ export const DirectoryView: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="space-y-1.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                  <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-[#1E3352]/60">
                     <div className="flex justify-between">
                       <span className="text-slate-400">RUT:</span>
-                      <span className="font-mono font-bold text-slate-800">{user.rut || 'No informado'}</span>
+                      <span className="font-mono font-bold text-white">{user.rut || 'No informado'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Usuario AD:</span>
-                      <span className="font-mono text-slate-700 font-semibold">{user.samAccountName}</span>
+                      <span className="font-mono text-[#38BDF8] font-semibold">{user.samAccountName}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Correo:</span>
-                      <span className="text-slate-700 font-medium truncate max-w-[170px]">{user.email}</span>
+                      <span className="text-slate-300 font-medium truncate max-w-[170px]">{user.email}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Depto:</span>
-                      <span className="text-slate-700 truncate max-w-[170px]">{user.department || 'Dirección Nacional'}</span>
+                      <span className="text-slate-300 truncate max-w-[170px]">{user.department || 'Dirección Nacional'}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div className="pt-3 border-t border-[#1E3352]/60 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs">
-                    <Laptop className="w-4 h-4 text-[#003B70]" />
-                    <span className="text-slate-600 font-medium">Equipos a cargo:</span>
-                    <strong className="text-[#003B70] font-bold">{assigned.length}</strong>
+                    <Laptop className="w-4 h-4 text-[#38BDF8]" />
+                    <span className="text-slate-300 font-medium">Equipos a cargo:</span>
+                    <span className="font-mono font-bold text-white">{assigned.length}</span>
                   </div>
-
-                  {assigned.length > 0 ? (
+                  {assigned.length > 0 && (
                     <button
+                      type="button"
                       onClick={() => setSelectedUserForAssets(user)}
-                      className="text-xs text-[#003B70] hover:text-[#002A50] font-bold hover:underline"
+                      className="text-[11px] text-[#38BDF8] hover:text-white font-bold hover:underline"
                     >
-                      Ver Activos ({assigned.length})
+                      Ver ({assigned.length})
                     </button>
-                  ) : (
-                    <span className="text-xs text-slate-400">Sin equipos</span>
                   )}
                 </div>
               </div>

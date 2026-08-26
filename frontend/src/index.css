@@ -4,20 +4,22 @@
 
 @layer base {
   body {
-    background-color: #F4F6F8;
-    color: #1E293B;
+    background-color: #0A111E;
+    color: #E2E8F0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
 }
 
-/* Identidad Visual Oficial Gobierno de Chile / ChileAtiende */
+/* Identidad Visual Oficial Gobierno de Chile / ChileAtiende - Modo Ejecutivo Premium */
 :root {
   --gob-blue: #003B70;
+  --gob-blue-vibrant: #0055A5;
   --gob-red: #E4002B;
-  --gob-light-blue: #EBF3FA;
-  --gob-border: #D1D5DB;
-  --gob-text-main: #1E293B;
-  --gob-text-secondary: #64748B;
+  --gob-bg-dark: #0A111E;
+  --gob-card-dark: #101C30;
+  --gob-border-dark: #1E3352;
+  --gob-text-main: #F1F5F9;
+  --gob-text-secondary: #94A3B8;
   --gob-success: #10B981;
   --gob-warning: #F59E0B;
 }
@@ -41,7 +43,7 @@
 
 /* Tarjetas y Contenedores */
 .gov-card {
-  @apply bg-white rounded-xl border border-slate-200 shadow-sm;
+  @apply bg-[#101C30] rounded-xl border border-[#1E3352] shadow-lg shadow-black/30 text-slate-100;
 }
 
 /* Tablas Estandarizadas */
@@ -49,13 +51,13 @@
   @apply w-full text-left text-sm border-collapse;
 }
 .gov-table th {
-  @apply px-4 py-3 bg-slate-50 text-slate-700 font-bold border-b border-slate-200;
+  @apply px-4 py-3 bg-gradient-to-r from-[#002D57] to-[#003B70] text-white font-bold border-b border-[#1E3352];
 }
 .gov-table td {
-  @apply px-4 py-3.5 border-b border-slate-100 text-slate-600;
+  @apply px-4 py-3.5 border-b border-[#1E3352]/50 text-slate-300;
 }
 .gov-table tr:hover td {
-  @apply bg-slate-50/60;
+  @apply bg-[#162744];
 }
 
 /* Scrollbar Personalizada */
@@ -64,19 +66,19 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: #091220;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #1E3352;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #335380;
 }
 
 /* Inputs y Selects Estandarizados */
 .gov-input {
-  @apply w-full px-3.5 py-2.5 min-h-[40px] bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-[#003B70] focus:ring-2 focus:ring-[#003B70]/20 transition-all font-normal;
+  @apply w-full px-3.5 py-2.5 min-h-[40px] bg-[#0C1729] border border-[#1E3352] rounded-lg text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-[#38BDF8] focus:ring-2 focus:ring-[#38BDF8]/20 transition-all font-normal;
   max-width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
@@ -110,15 +112,15 @@ input[type="date"]::-webkit-date-and-time-value {
 
 /* Botones Estandarizados */
 .gov-btn-primary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-bold text-white bg-[#003B70] hover:bg-[#002A50] rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-bold text-white bg-gradient-to-r from-[#003B70] to-[#0055A5] hover:from-[#002A50] hover:to-[#004282] border border-[#0055A5]/40 rounded-lg shadow-md shadow-[#003B70]/30 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
 }
 
 .gov-btn-secondary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-sm transition-all duration-200 hover:border-slate-400 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-semibold text-slate-200 bg-[#162744] hover:bg-[#1C3256] border border-[#233F6B] rounded-lg shadow-sm transition-all duration-200 hover:border-[#335994] hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
 }
 
 .gov-btn-danger {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-bold text-white bg-[#E4002B] hover:bg-[#C20024] rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-bold text-white bg-gradient-to-r from-[#E4002B] to-[#B80020] hover:from-[#C20024] hover:to-[#99001B] border border-red-500/30 rounded-lg shadow-md shadow-red-900/30 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
 }
 
 /* =========================================================================

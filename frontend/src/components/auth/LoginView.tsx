@@ -78,48 +78,48 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       <div className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
           
-          {/* Tarjeta de Autenticación Glassmorphic */}
-          <div className="gov-glass-panel rounded-3xl shadow-2xl shadow-black/40 overflow-hidden border border-white/60">
+          {/* Tarjeta de Autenticación Glassmorphic Dark */}
+          <div className="rounded-3xl shadow-2xl shadow-black/80 overflow-hidden border border-[#1E3B66]/60 bg-[#0C1729]/95 backdrop-blur-2xl">
             
             {/* Cabecera con Logotipo Oficial e Identidad */}
-            <div className="p-7 sm:p-8 pb-6 text-center border-b border-slate-100 bg-white/90">
+            <div className="p-7 sm:p-8 pb-6 text-center border-b border-[#1A2E4C] bg-[#08101E]/90">
               <div className="transform hover:scale-105 transition-transform duration-200 inline-block">
                 <ChileAtiendeLogo size="panel" className="mx-auto" />
               </div>
               
-              <div className="mt-4 pt-3.5 border-t border-slate-100/80">
-                <h1 className="text-base sm:text-lg font-black text-[#003B70] tracking-tight">
+              <div className="mt-4 pt-3.5 border-t border-[#1A2E4C]/80">
+                <h1 className="text-base sm:text-lg font-black text-white tracking-tight">
                   Sistema de Gestión de Activos TI (ITAM)
                 </h1>
-                <p className="text-xs text-slate-500 font-medium mt-1">
+                <p className="text-xs text-slate-400 font-medium mt-1">
                   Control de Inventario & Bodegas • Instituto de Previsión Social (IPS)
                 </p>
 
                 {/* Badge de Active Directory Multi-Dominio */}
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mt-3 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <Server className="w-3 h-3 text-emerald-600" />
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mt-3 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <Server className="w-3 h-3 text-emerald-400" />
                   <span>Active Directory Dual (CHA & IPS)</span>
                 </div>
               </div>
             </div>
 
             {/* Cuerpo del Formulario */}
-            <div className="p-7 sm:p-8 pt-6 bg-white/95 space-y-5">
+            <div className="p-7 sm:p-8 pt-6 bg-[#0C1729]/95 space-y-5">
               {errorMessage && (
-                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5 animate-in fade-in duration-150">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-[#E4002B] mt-0.5" />
+                <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-800/80 text-red-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-150">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-[#F87171] mt-0.5" />
                   <span className="leading-relaxed font-medium">{errorMessage}</span>
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1.5">
+                  <label className="block text-slate-200 font-bold mb-1.5">
                     Usuario Institucional / RUT / Correo *
                   </label>
                   <div className="relative group">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#003B70] transition-colors pointer-events-none" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-[#38BDF8] transition-colors pointer-events-none" />
                     <input
                       type="text"
                       value={identifier}
@@ -134,11 +134,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-slate-700 font-bold">Contraseña *</label>
+                    <label className="block text-slate-200 font-bold">Contraseña *</label>
                     <span className="text-[11px] text-slate-400 font-medium">Seguridad DTI / TLS</span>
                   </div>
                   <div className="relative group">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#003B70] transition-colors pointer-events-none" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-[#38BDF8] transition-colors pointer-events-none" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
@@ -150,7 +150,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#003B70] p-1 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#38BDF8] p-1 transition-colors"
                       title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -162,7 +162,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full gov-btn-primary py-3 text-xs font-bold shadow-md hover:shadow-xl bg-gradient-to-r from-[#003B70] to-[#00508F] hover:from-[#002A50] hover:to-[#003B70] transition-all duration-200 group"
+                    className="w-full gov-btn-primary py-3 text-xs font-bold shadow-lg shadow-[#003B70]/40 bg-gradient-to-r from-[#003B70] via-[#0055A5] to-[#004282] hover:from-[#002A50] hover:to-[#003B70] transition-all duration-200 group"
                   >
                     {isLoading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -180,61 +180,61 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </form>
 
               {/* Selector de Perfiles de Prueba (Demo Roles) con Micro-interacciones */}
-              <div className="pt-4 border-t border-slate-100 space-y-2.5">
-                <div className="flex items-center justify-between text-[11px] text-slate-500 font-bold uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5 text-[#003B70]">
-                    <KeyRound className="w-3.5 h-3.5 text-[#0F69B4]" /> Acceso Rápido por Perfil (Demo)
+              <div className="pt-4 border-t border-[#1A2E4C] space-y-2.5">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5 text-[#38BDF8]">
+                    <KeyRound className="w-3.5 h-3.5 text-[#38BDF8]" /> Acceso Rápido por Perfil (Demo)
                   </span>
-                  <span className="text-[10px] text-slate-400 font-normal">Click para autocompletar</span>
+                  <span className="text-[10px] text-slate-500 font-normal">Click para autocompletar</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-left">
                   <button
                     type="button"
                     onClick={() => handleQuickLogin('admin', 'admin123')}
-                    className="p-2.5 rounded-xl bg-slate-50/80 hover:bg-[#EBF3FA] border border-slate-200 hover:border-[#003B70] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs text-left group"
+                    className="p-2.5 rounded-xl bg-[#101F36] hover:bg-[#162D4F] border border-[#1E385F] hover:border-[#38BDF8] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs text-left group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#003B70] text-xs group-hover:text-[#00274D]">Administrador</span>
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#003B70] transition-transform duration-200 group-hover:scale-110" />
+                      <span className="font-bold text-[#38BDF8] text-xs group-hover:text-white">Administrador</span>
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#38BDF8] transition-transform duration-200 group-hover:scale-110" />
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Control total y Usuarios</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Control total y Usuarios</p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleQuickLogin('bodega', 'bodega123')}
-                    className="p-2.5 rounded-xl bg-slate-50/80 hover:bg-[#EBF3FA] border border-slate-200 hover:border-[#003B70] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs text-left group"
+                    className="p-2.5 rounded-xl bg-[#101F36] hover:bg-[#162D4F] border border-[#1E385F] hover:border-[#38BDF8] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs text-left group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800 text-xs group-hover:text-[#003B70]">Jefe Bodega</span>
-                      <Building2 className="w-3.5 h-3.5 text-blue-600 transition-transform duration-200 group-hover:scale-110" />
+                      <span className="font-bold text-slate-200 text-xs group-hover:text-white">Jefe Bodega</span>
+                      <Building2 className="w-3.5 h-3.5 text-blue-400 transition-transform duration-200 group-hover:scale-110" />
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Guías, stock y traspasos</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Guías, stock y traspasos</p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleQuickLogin('tecnico', 'tecnico123')}
-                    className="p-2.5 rounded-xl bg-slate-50/80 hover:bg-[#EBF3FA] border border-slate-200 hover:border-[#003B70] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs text-left group"
+                    className="p-2.5 rounded-xl bg-[#101F36] hover:bg-[#162D4F] border border-[#1E385F] hover:border-[#38BDF8] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs text-left group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800 text-xs group-hover:text-[#003B70]">Técnico Soporte</span>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 transition-transform duration-200 group-hover:scale-110" />
+                      <span className="font-bold text-slate-200 text-xs group-hover:text-white">Técnico Soporte</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 transition-transform duration-200 group-hover:scale-110" />
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Asignaciones y actas</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Asignaciones y actas</p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleQuickLogin('auditor', 'auditor123')}
-                    className="p-2.5 rounded-xl bg-slate-50/80 hover:bg-[#EBF3FA] border border-slate-200 hover:border-[#003B70] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs text-left group"
+                    className="p-2.5 rounded-xl bg-[#101F36] hover:bg-[#162D4F] border border-[#1E385F] hover:border-[#38BDF8] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs text-left group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800 text-xs group-hover:text-[#003B70]">Auditor / CGR</span>
-                      <User className="w-3.5 h-3.5 text-purple-600 transition-transform duration-200 group-hover:scale-110" />
+                      <span className="font-bold text-slate-200 text-xs group-hover:text-white">Auditor / CGR</span>
+                      <User className="w-3.5 h-3.5 text-purple-400 transition-transform duration-200 group-hover:scale-110" />
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Solo lectura y reportes</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Solo lectura y reportes</p>
                   </button>
                 </div>
               </div>

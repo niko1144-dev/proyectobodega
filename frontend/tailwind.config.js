@@ -7,36 +7,37 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta Oficial ChileAtiende & Gobierno de Chile
+        // Paleta Oficial ChileAtiende & Gobierno de Chile - Modo Ejecutivo Premium
         chileatiende: {
           blue: "#003B70",       // Azul Institucional Principal
           dark: "#002A50",       // Azul Oscuro (Hover / Headers)
-          light: "#EBF3FA",      // Azul Muy Claro (Fondos / Selección / Badges)
-          border: "#BFDBFE",
+          light: "#0E2442",      // Azul Profundo para Superficies
+          border: "#1E3B66",
         },
         gob: {
           red: "#E4002B",        // Rojo Institucional Gobierno de Chile
           redDark: "#B80022",    // Rojo Hover
-          redLight: "#FEE2E2",   // Rojo Claro para Alertas
+          redLight: "#380D15",   // Rojo Oscuro para Alertas
         },
         surface: {
-          bg: "#F4F6F8",         // Background Global Institucional
-          card: "#FFFFFF",       // Superficie de Tarjetas
-          border: "#E2E8F0",     // Bordes y Divisores
+          bg: "#0A111E",         // Background Global Ejecutivo
+          card: "#101C30",       // Superficie de Tarjetas Slate Navy
+          cardSecondary: "#0D1728", // Sub-tarjetas y filtros
+          border: "#1E3352",     // Bordes y Divisores
         },
         status: {
-          successBg: "#ECFDF5",
-          successText: "#065F46",
-          successBorder: "#A7F3D0",
-          warningBg: "#FFFBEB",
-          warningText: "#92400E",
-          warningBorder: "#FDE68A",
-          dangerBg: "#FEF2F2",
-          dangerText: "#991B1B",
-          dangerBorder: "#FECACA",
-          infoBg: "#EFF6FF",
-          infoText: "#1E40AF",
-          infoBorder: "#BFDBFE",
+          successBg: "rgba(6, 78, 59, 0.6)",
+          successText: "#34D399",
+          successBorder: "#059669",
+          warningBg: "rgba(69, 26, 3, 0.6)",
+          warningText: "#FBBF24",
+          warningBorder: "#D97706",
+          dangerBg: "rgba(76, 5, 25, 0.6)",
+          dangerText: "#F87171",
+          dangerBorder: "#E11D48",
+          infoBg: "rgba(12, 43, 89, 0.6)",
+          infoText: "#60A5FA",
+          infoBorder: "#1D4ED8",
         }
       },
       fontFamily: {
