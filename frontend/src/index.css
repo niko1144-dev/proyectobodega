@@ -2,32 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --bg-main: #F4F6F8;
-    --text-main: #1E293B;
-  }
+/* =========================================================================
+   SISTEMA DE DISEÑO BICROMÁTICO CHILEATIENDE & GOBIERNO DE CHILE
+   Modo Día (Light Institucional) / Modo Noche (Executive Dark & Midnight Navy)
+   ========================================================================= */
 
-  html.dark, body.dark, .dark {
-    --bg-main: #0A111E;
-    --text-main: #E2E8F0;
-  }
-
-  html, body {
-    background-color: var(--bg-main);
-    color: var(--text-main);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    transition: background-color 0.25s ease, color 0.25s ease;
-  }
-}
-
-/* Identidad Visual Oficial Gobierno de Chile / ChileAtiende */
 :root {
+  --bg-app: #F4F6F8;
+  --bg-navbar: #FFFFFF;
+  --border-navbar: #E2E8F0;
+  --bg-sidebar: #FFFFFF;
+  --border-sidebar: #E2E8F0;
+  --bg-card: #FFFFFF;
+  --border-card: #E2E8F0;
+  --bg-card-secondary: #F8FAFC;
+  --border-card-secondary: #E2E8F0;
+  --bg-input: #FFFFFF;
+  --border-input: #CBD5E1;
+  --bg-table-header: #003B70;
+  --bg-table-row: #FFFFFF;
+  --bg-table-hover: #F8FAFC;
+  --border-table: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --text-accent: #003B70;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07);
+
+  /* Identidad Oficial */
   --gob-blue: #003B70;
   --gob-blue-vibrant: #0055A5;
   --gob-red: #E4002B;
   --gob-success: #10B981;
   --gob-warning: #F59E0B;
+}
+
+html.dark, body.dark, .dark {
+  --bg-app: #0A111E;
+  --bg-navbar: #080F1D;
+  --border-navbar: #182A44;
+  --bg-sidebar: #070D1A;
+  --border-sidebar: #16263F;
+  --bg-card: #101C30;
+  --border-card: #1E3352;
+  --bg-card-secondary: #0D182B;
+  --border-card-secondary: #1E3352;
+  --bg-input: #0C1729;
+  --border-input: #1E3352;
+  --bg-table-header: #002D57;
+  --bg-table-row: #101C30;
+  --bg-table-hover: #162744;
+  --border-table: #1E3352;
+  --text-primary: #FFFFFF;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-accent: #38BDF8;
+  --shadow-card: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+}
+
+@layer base {
+  html, body {
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
+    min-height: 100vh;
+  }
 }
 
 /* Franja Bicromática Institucional */
@@ -49,21 +89,36 @@
 
 /* Tarjetas y Contenedores */
 .gov-card {
-  @apply bg-white dark:bg-[#101C30] rounded-xl border border-slate-200 dark:border-[#1E3352] shadow-sm dark:shadow-lg dark:shadow-black/30 text-slate-800 dark:text-slate-100 transition-colors duration-200;
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-card) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-card);
+  border-radius: 0.75rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* Tablas Estandarizadas */
 .gov-table {
-  @apply w-full text-left text-sm border-collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+  border-collapse: collapse;
 }
 .gov-table th {
-  @apply px-4 py-3 bg-[#003B70] dark:bg-gradient-to-r dark:from-[#002D57] dark:to-[#003B70] text-white font-bold border-b border-slate-200 dark:border-[#1E3352];
+  background-color: var(--bg-table-header) !important;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-card);
 }
 .gov-table td {
-  @apply px-4 py-3.5 border-b border-slate-100 dark:border-[#1E3352]/50 text-slate-600 dark:text-slate-300;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  background-color: var(--bg-table-row);
 }
 .gov-table tr:hover td {
-  @apply bg-slate-50/70 dark:bg-[#162744];
+  background-color: var(--bg-table-hover) !important;
 }
 
 /* Scrollbar Personalizada */
@@ -72,169 +127,176 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-slate-100 dark:bg-[#091220];
+  background: var(--bg-sidebar);
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-[#1E3352];
+  background: var(--border-card);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400 dark:bg-[#335380];
+  background: #38BDF8;
 }
 
 /* Inputs y Selects Estandarizados */
 .gov-input {
-  @apply w-full px-3.5 py-2.5 min-h-[40px] bg-white dark:bg-[#0C1729] border border-slate-300 dark:border-[#1E3352] rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-[#003B70] dark:focus:border-[#38BDF8] focus:ring-2 focus:ring-[#003B70]/20 dark:focus:ring-[#38BDF8]/20 transition-all font-normal;
+  width: 100% !important;
+  padding: 0.625rem 0.875rem;
+  min-height: 40px;
+  background-color: var(--bg-input) !important;
+  border: 1px solid var(--border-input) !important;
+  color: var(--text-primary) !important;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
   max-width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
 }
-
-/* Corrección de desborde responsivo en móviles para inputs tipo fecha */
-input[type="date"].gov-input,
-input[type="date"] {
-  max-width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box !important;
+.gov-input::placeholder {
+  color: var(--text-muted);
+}
+.gov-input:focus {
+  outline: none;
+  border-color: var(--text-accent) !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
-input[type="date"]::-webkit-date-and-time-value {
-  text-align: left;
-}
-
-.gov-input-with-icon,
-.gov-input.pl-9,
-.gov-input.pl-10,
-.gov-input.pl-11 {
-  padding-left: 2.75rem !important; /* 44px para separación perfecta del icono izquierdo */
-}
-
-.gov-input-with-both-icons,
-.gov-input.pl-10.pr-10,
-.gov-input.pl-9.pr-10 {
+/* Inputs con Iconos */
+.gov-input-with-icon {
   padding-left: 2.75rem !important;
-  padding-right: 2.75rem !important; /* Separación para icono de ojo/derecho */
+}
+.gov-input-with-both-icons {
+  padding-left: 2.75rem !important;
+  padding-right: 2.75rem !important;
 }
 
 /* Botones Estandarizados */
 .gov-btn-primary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-bold text-white bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] hover:bg-[#002A50] dark:hover:from-[#002A50] dark:hover:to-[#004282] border border-transparent dark:border-[#0055A5]/40 rounded-lg shadow-sm dark:shadow-md dark:shadow-[#003B70]/30 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  min-height: 40px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #FFFFFF !important;
+  background: linear-gradient(135deg, #003B70 0%, #0055A5 100%) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 59, 112, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.gov-btn-primary:hover {
+  background: linear-gradient(135deg, #002A50 0%, #004282 100%) !important;
+  box-shadow: 0 4px 12px rgba(0, 59, 112, 0.4);
+  transform: translateY(-1px);
+}
+.gov-btn-primary:active {
+  transform: translateY(0);
+}
+.gov-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .gov-btn-secondary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-[#162744] hover:bg-slate-50 dark:hover:bg-[#1C3256] border border-slate-300 dark:border-[#233F6B] rounded-lg shadow-sm transition-all duration-200 hover:border-slate-400 dark:hover:border-[#335994] hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  min-height: 40px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary) !important;
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-card) !important;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.gov-btn-secondary:hover {
+  background-color: var(--bg-table-hover) !important;
+  border-color: var(--text-accent) !important;
+  transform: translateY(-1px);
 }
 
 .gov-btn-danger {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-sm font-bold text-white bg-[#E4002B] dark:bg-gradient-to-r dark:from-[#E4002B] dark:to-[#B80020] hover:bg-[#C20024] dark:hover:from-[#C20024] dark:hover:to-[#99001B] border border-transparent dark:border-red-500/30 rounded-lg shadow-sm dark:shadow-md dark:shadow-red-900/30 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  min-height: 40px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #FFFFFF !important;
+  background: linear-gradient(135deg, #E4002B 0%, #B80020 100%) !important;
+  border: 1px solid rgba(248, 113, 113, 0.3) !important;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(228, 0, 43, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.gov-btn-danger:hover {
+  background: linear-gradient(135deg, #C20024 0%, #99001B 100%) !important;
+  box-shadow: 0 4px 12px rgba(228, 0, 43, 0.4);
+  transform: translateY(-1px);
 }
 
 /* =========================================================================
-   ANIMACIONES Y EFECTOS DINÁMICOS PREMIUM
+   ANIMACIONES Y EFECTOS DINÁMICOS
    ========================================================================= */
 
 @keyframes float-slow {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-12px) rotate(1.5deg);
-  }
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
 }
 
 @keyframes float-reverse {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(14px) rotate(-1.5deg);
-  }
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(12px) rotate(-2deg); }
 }
 
 @keyframes pulse-subtle {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.75;
-    transform: scale(1.06);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.05); }
 }
 
 .animate-float-slow {
-  animation: float-slow 14s ease-in-out infinite;
+  animation: float-slow 10s ease-in-out infinite;
 }
 
 .animate-float-reverse {
-  animation: float-reverse 18s ease-in-out infinite;
+  animation: float-reverse 12s ease-in-out infinite;
 }
 
 .animate-pulse-subtle {
-  animation: pulse-subtle 8s ease-in-out infinite;
+  animation: pulse-subtle 6s ease-in-out infinite;
 }
 
-/* Patrón de Rejilla Corporativa */
 .bg-corporate-grid {
   background-size: 40px 40px;
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 59, 112, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 59, 112, 0.08) 1px, transparent 1px);
+}
+
+.dark .bg-corporate-grid {
+  background-image: 
+    linear-gradient(to right, rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.06) 1px, transparent 1px);
 }
 
 .bg-corporate-dots {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(0, 59, 112, 0.15) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
-/* Cristal Glassmorphism Premium */
-.gov-glass-panel {
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.gov-glass-card-dark {
-  background: rgba(15, 33, 64, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-/* Micro-interacción de Menús Dinámicos */
-.nav-item-interactive {
-  position: relative;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.nav-item-interactive:hover {
-  transform: translateX(4px);
-}
-
-.nav-item-interactive .nav-icon-container {
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.nav-item-interactive:hover .nav-icon-container {
-  transform: scale(1.12) rotate(3deg);
-}
-
-/* Tarjetas interactivas con elevación al pasar el mouse */
-.gov-card-interactive {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.gov-card-interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 59, 112, 0.1), 0 8px 10px -6px rgba(0, 59, 112, 0.05);
+.dark .bg-corporate-dots {
+  background-image: radial-gradient(rgba(56, 189, 248, 0.12) 1px, transparent 1px);
 }
