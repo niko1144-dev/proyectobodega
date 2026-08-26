@@ -621,7 +621,9 @@ export const ReceptionView: React.FC = () => {
                   type="button"
                   onClick={() => setReceptionType('ASSETS')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
-                    receptionType === 'ASSETS' ? 'bg-[#003B70] text-white border-[#003B70]' : 'bg-white text-slate-600 border-slate-300'
+                    receptionType === 'ASSETS' 
+                      ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white border-transparent dark:border-[#38BDF8]/40 shadow-2xs' 
+                      : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border-slate-300 dark:border-[#1E3352]'
                   }`}
                 >
                   Activos Serializados (ITAM)
@@ -630,7 +632,9 @@ export const ReceptionView: React.FC = () => {
                   type="button"
                   onClick={() => setReceptionType('CONSUMABLES')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
-                    receptionType === 'CONSUMABLES' ? 'bg-[#003B70] text-white border-[#003B70]' : 'bg-white text-slate-600 border-slate-300'
+                    receptionType === 'CONSUMABLES' 
+                      ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white border-transparent dark:border-[#38BDF8]/40 shadow-2xs' 
+                      : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border-slate-300 dark:border-[#1E3352]'
                   }`}
                 >
                   Insumos / Accesorios a Granel
@@ -1007,7 +1011,7 @@ export const ReceptionView: React.FC = () => {
                 ) : (
                   <div className="overflow-x-auto rounded-lg border border-slate-200">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+                      <thead className="bg-slate-50 dark:bg-[#0C1729] text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-[#1E3352]">
                         <tr>
                           <th className="px-3 py-2 font-bold">#</th>
                           <th className="px-3 py-2 font-bold">N° Serie</th>
@@ -1018,7 +1022,7 @@ export const ReceptionView: React.FC = () => {
                           <th className="px-3 py-2 text-right font-bold">Quitar</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                      <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                         {items.map((item, idx) => {
                           const typeObj = assetTypes.find(t => t.id === item.assetTypeId);
                           return (
@@ -1122,9 +1126,9 @@ export const ReceptionView: React.FC = () => {
         <div className="gov-card p-5 space-y-4">
           <h3 className="text-sm font-bold text-slate-800">Registro Histórico de Guías de Despacho Recepcionadas</h3>
           
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-[#1E3352]">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#003B70] text-white">
+              <thead className="bg-[#003B70] dark:bg-gradient-to-r dark:from-[#002D57] dark:to-[#003B70] text-white">
                 <tr>
                   <th className="px-3 py-2.5 font-bold">N° Guía SII</th>
                   <th className="px-3 py-2.5 font-bold">Proveedor</th>
@@ -1135,17 +1139,17 @@ export const ReceptionView: React.FC = () => {
                   <th className="px-3 py-2.5 font-bold">Receptor</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                 {dispatchGuides.map(guide => (
-                  <tr key={guide.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2.5 font-mono font-bold text-slate-900">{guide.guideNumber}</td>
-                    <td className="px-3 py-2.5 font-medium">{guide.supplierName}</td>
+                  <tr key={guide.id} className="hover:bg-slate-50 dark:hover:bg-[#162744]">
+                    <td className="px-3 py-2.5 font-mono font-bold text-slate-900 dark:text-white">{guide.guideNumber}</td>
+                    <td className="px-3 py-2.5 font-medium text-slate-700 dark:text-slate-200">{guide.supplierName}</td>
                     <td className="px-3 py-2.5">
                       {guide.purchaseOrderNumber && (
-                        <span className="font-mono text-[#003B70] font-bold">OC: {guide.purchaseOrderNumber}</span>
+                        <span className="font-mono text-[#003B70] dark:text-[#38BDF8] font-bold">OC: {guide.purchaseOrderNumber}</span>
                       )}
                       {guide.leasingContractNumber && (
-                        <span className="font-mono text-blue-700 font-bold">Contrato: {guide.leasingContractNumber}</span>
+                        <span className="font-mono text-blue-700 dark:text-[#60A5FA] font-bold">Contrato: {guide.leasingContractNumber}</span>
                       )}
                     </td>
                     <td className="px-3 py-2.5">{guide.branchName}</td>

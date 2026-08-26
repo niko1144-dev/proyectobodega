@@ -307,16 +307,16 @@ export const ConsumablesView: React.FC<ConsumablesViewProps> = ({ currentBranchI
 
           {/* Historial Kardex de la Bodega */}
           <div className="gov-card p-5 space-y-3">
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-              <History className="w-4 h-4 text-[#003B70]" />
-              <h3 className="text-sm font-bold text-slate-800">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-[#1E3352]/60">
+              <History className="w-4 h-4 text-[#003B70] dark:text-[#38BDF8]" />
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
                 Últimos Movimientos de Stock en {activeBranchObj?.name}
               </h3>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-[#1E3352]">
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#003B70] text-white">
+                <thead className="bg-[#003B70] dark:bg-gradient-to-r dark:from-[#002D57] dark:to-[#003B70] text-white">
                   <tr>
                     <th className="px-3 py-2 font-bold">Tipo</th>
                     <th className="px-3 py-2 font-bold">Accesorio / Insumo</th>
@@ -326,35 +326,35 @@ export const ConsumablesView: React.FC<ConsumablesViewProps> = ({ currentBranchI
                     <th className="px-3 py-2 font-bold">Fecha / Hora</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                   {movements.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-4 text-center text-slate-400">
+                      <td colSpan={6} className="p-4 text-center text-slate-400 dark:text-slate-500">
                         Sin movimientos recientes en {activeBranchObj?.name}.
                       </td>
                     </tr>
                   ) : (
                     movements.map(m => (
-                      <tr key={m.id} className="hover:bg-slate-50">
+                      <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-[#162744]">
                         <td className="px-3 py-2">
                           {m.movementType === 'INGRESO_GUIA' ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
                               <ArrowUpRight className="w-3.5 h-3.5" /> Entrada
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[#003B70] font-bold">
+                            <span className="inline-flex items-center gap-1 text-[#003B70] dark:text-[#38BDF8] font-bold">
                               <ArrowDownRight className="w-3.5 h-3.5" /> Salida
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2 font-bold text-slate-900">{m.consumableName}</td>
+                        <td className="px-3 py-2 font-bold text-slate-900 dark:text-white">{m.consumableName}</td>
                         <td className="px-3 py-2 font-bold">{m.quantity} un.</td>
-                        <td className="px-3 py-2 text-slate-600">
+                        <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
                           {m.reason}
-                          {m.recipientUserName && <span className="text-[#003B70] font-bold"> ({m.recipientUserName})</span>}
+                          {m.recipientUserName && <span className="text-[#003B70] dark:text-[#38BDF8] font-bold"> ({m.recipientUserName})</span>}
                         </td>
-                        <td className="px-3 py-2 text-slate-500">{m.registeredByUserName}</td>
-                        <td className="px-3 py-2 text-slate-400">{formatDateTime(m.timestamp)}</td>
+                        <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{m.registeredByUserName}</td>
+                        <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{formatDateTime(m.timestamp)}</td>
                       </tr>
                     ))
                   )}

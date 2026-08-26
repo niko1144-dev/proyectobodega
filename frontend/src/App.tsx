@@ -16,8 +16,10 @@ import { SettingsView } from './components/settings/SettingsView';
 import { storage } from './db/storage';
 import { PlatformUser } from './types/user';
 import { getDaysUntil } from './utils/formatters';
+import { useTheme } from './context/ThemeContext';
 
 export const App: React.FC = () => {
+  const { isDark } = useTheme();
   // Estado de Autenticación
   const [currentUser, setCurrentUser] = useState<PlatformUser | null>(() => {
     return storage.getCurrentUser();
@@ -89,7 +91,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F6F8] dark:bg-[#0A111E] text-slate-800 dark:text-slate-100 transition-colors duration-200 antialiased font-sans text-base">
+    <div className={`min-h-screen flex flex-col ${isDark ? 'dark bg-[#0A111E] text-slate-100' : 'light bg-[#F4F6F8] text-slate-800'} transition-colors duration-200 antialiased font-sans text-base`}>
       {/* Barra de Navegación Superior */}
       <Navbar
         currentUser={currentUser}

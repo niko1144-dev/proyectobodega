@@ -8,12 +8,12 @@
     --text-main: #1E293B;
   }
 
-  html.dark {
+  html.dark, body.dark, .dark {
     --bg-main: #0A111E;
     --text-main: #E2E8F0;
   }
 
-  body {
+  html, body {
     background-color: var(--bg-main);
     color: var(--text-main);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

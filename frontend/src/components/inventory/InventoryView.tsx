@@ -254,7 +254,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       <div className="gov-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#003B70] text-white select-none">
+            <thead className="bg-[#003B70] dark:bg-gradient-to-r dark:from-[#002D57] dark:to-[#003B70] text-white select-none border-b border-slate-200 dark:border-[#1E3352]">
               <tr>
                 <th className="px-4 py-3.5 w-10">
                   <button onClick={handleSelectAll} className="text-white hover:opacity-80">
@@ -275,10 +275,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
               {filteredAssets.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-400 text-sm">
+                  <td colSpan={8} className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">
                     No se encontraron activos con los filtros seleccionados.
                   </td>
                 </tr>
@@ -288,13 +288,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   return (
                     <tr 
                       key={asset.id} 
-                      className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-blue-50/60' : ''}`}
+                      className={`hover:bg-slate-50 dark:hover:bg-[#162744] transition-colors ${isSelected ? 'bg-blue-50/60 dark:bg-blue-900/30' : ''}`}
                     >
                       {/* Checkbox */}
                       <td className="px-4 py-3">
-                        <button onClick={() => handleToggleSelect(asset.id)} className="text-slate-400 hover:text-slate-700">
+                        <button onClick={() => handleToggleSelect(asset.id)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-[#003B70]" />
+                            <CheckSquare className="w-4 h-4 text-[#003B70] dark:text-[#38BDF8]" />
                           ) : (
                             <Square className="w-4 h-4" />
                           )}
@@ -303,9 +303,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                       {/* Identificadores */}
                       <td className="px-4 py-3 font-mono">
-                        <div className="font-bold text-slate-900 text-sm">{asset.serialNumber}</div>
+                        <div className="font-bold text-slate-900 dark:text-white text-sm">{asset.serialNumber}</div>
                         {asset.inventoryNumber ? (
-                          <div className="text-xs font-bold text-[#003B70] mt-0.5">
+                          <div className="text-xs font-bold text-[#003B70] dark:text-[#38BDF8] mt-0.5">
                             Inv: {asset.inventoryNumber}
                           </div>
                         ) : (
@@ -315,8 +315,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                       {/* Dispositivo / Modelo */}
                       <td className="px-4 py-3">
-                        <div className="font-bold text-slate-900 text-sm">{asset.brand} {asset.model}</div>
-                        <div className="text-xs text-slate-500">{asset.assetTypeName}</div>
+                        <div className="font-bold text-slate-900 dark:text-white text-sm">{asset.brand} {asset.model}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{asset.assetTypeName}</div>
                       </td>
 
                       {/* Modalidad */}
@@ -333,23 +333,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       <td className="px-4 py-3">
                         {asset.assignedToUserName ? (
                           <div>
-                            <div className="font-bold text-[#003B70] text-sm">{asset.assignedToUserName}</div>
-                            <div className="text-xs text-slate-500">{asset.currentBranchName}</div>
+                            <div className="font-bold text-[#003B70] dark:text-[#38BDF8] text-sm">{asset.assignedToUserName}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">{asset.currentBranchName}</div>
                           </div>
                         ) : (
                           <div>
-                            <span className="text-slate-700 font-medium text-sm">{asset.currentBranchName}</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-medium text-sm">{asset.currentBranchName}</span>
                             <div className="text-xs text-slate-400">{asset.locationDetail || 'Bodega'}</div>
                           </div>
                         )}
                       </td>
 
                       {/* Respaldo Documental */}
-                      <td className="px-4 py-3 text-xs text-slate-500">
-                        <div>Guía: <strong className="text-slate-700">{asset.dispatchGuideNumber}</strong></div>
+                      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                        <div>Guía: <strong className="text-slate-700 dark:text-slate-200">{asset.dispatchGuideNumber}</strong></div>
                         {asset.purchaseOrderNumber && <div>OC: {asset.purchaseOrderNumber}</div>}
                         {asset.leasingContractNumber && (
-                          <div className="text-blue-700 font-mono text-xs font-semibold">
+                          <div className="text-blue-700 dark:text-[#60A5FA] font-mono text-xs font-semibold">
                             {asset.leasingContractNumber}
                           </div>
                         )}
@@ -361,7 +361,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           <button
                             onClick={() => setSelectedAssetForQR(asset)}
                             title="Ver Código QR / Etiqueta"
-                            className="p-1.5 text-slate-500 hover:text-[#003B70] hover:bg-slate-100 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-[#003B70] dark:hover:text-[#38BDF8] hover:bg-slate-100 dark:hover:bg-[#162744] rounded-lg transition-colors"
                           >
                             <QrCode className="w-4 h-4" />
                           </button>
@@ -369,7 +369,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           <button
                             onClick={() => setSelectedAssetForDetail(asset)}
                             title="Ver Ficha y Kardex"
-                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#162744] rounded-lg transition-colors"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -377,7 +377,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           <button
                             onClick={() => { setStatusChangeModalAsset(asset); setNewStatusChoice(asset.status); }}
                             title="Cambiar Estado / Mantención"
-                            className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-[#162744] rounded-lg transition-colors"
                           >
                             <Wrench className="w-4 h-4" />
                           </button>

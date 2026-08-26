@@ -364,13 +364,13 @@ export const TransfersView: React.FC = () => {
       )}
 
       {/* Navegación Tabs */}
-      <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-200">
+      <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-200 dark:border-[#1E3352]/60">
         <button
           onClick={() => setActiveTab('ASSETS')}
           className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
             activeTab === 'ASSETS'
-              ? 'bg-[#003B70] text-white shadow-2xs'
-              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40'
+              : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <Boxes className="w-4 h-4" />
@@ -381,8 +381,8 @@ export const TransfersView: React.FC = () => {
           onClick={() => setActiveTab('CONSUMABLES')}
           className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
             activeTab === 'CONSUMABLES'
-              ? 'bg-[#003B70] text-white shadow-2xs'
-              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40'
+              : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <Cable className="w-4 h-4" />
@@ -393,8 +393,8 @@ export const TransfersView: React.FC = () => {
           onClick={() => setActiveTab('HISTORY')}
           className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
             activeTab === 'HISTORY'
-              ? 'bg-[#003B70] text-white shadow-2xs'
-              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40'
+              : 'bg-white dark:bg-[#0C1729] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1E3352] hover:bg-slate-50 dark:hover:bg-[#14233C]'
           }`}
         >
           <History className="w-4 h-4" />
@@ -602,7 +602,7 @@ export const TransfersView: React.FC = () => {
                       <th className="px-3.5 py-2.5 font-bold">Estado Actual</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                  <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                     {filteredAvailableAssets.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
@@ -837,7 +837,7 @@ export const TransfersView: React.FC = () => {
                       <th className="px-3.5 py-2.5 font-bold text-center">Acción</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                  <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                     {consumables.map(c => {
                       const stockInOrigin = consumableStocks.find(
                         s => s.consumableId === c.id && s.branchId === consSourceBranchId
@@ -931,7 +931,7 @@ export const TransfersView: React.FC = () => {
                     <th className="px-3 py-2 font-bold">Folio</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                   {transferHistory.assetTransfers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
@@ -977,7 +977,7 @@ export const TransfersView: React.FC = () => {
                     <th className="px-3 py-2 font-bold">Folio</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                   {transferHistory.consumableTransfers.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-4 py-6 text-center text-slate-400">

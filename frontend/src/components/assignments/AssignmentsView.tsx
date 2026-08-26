@@ -371,11 +371,13 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-1 shadow-2xs">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0C1729] border border-slate-200 dark:border-[#1E3352] rounded-lg p-1 shadow-2xs">
           <button
             onClick={() => { setActiveTab('NEW'); setCompletedAssignment(null); }}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
-              activeTab === 'NEW' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              activeTab === 'NEW' 
+                ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40' 
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             Nueva Asignación
@@ -383,7 +385,9 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
           <button
             onClick={() => setActiveTab('HISTORY')}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
-              activeTab === 'HISTORY' ? 'bg-[#003B70] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              activeTab === 'HISTORY' 
+                ? 'bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white shadow-2xs border border-transparent dark:border-[#38BDF8]/40' 
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             Historial de Actas ({assignments.length})
@@ -693,25 +697,25 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                         <th className="px-3 py-2 text-right font-bold">Quitar</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                    <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                       {selectedItemsList.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50">
-                          <td className="px-3 py-2 text-slate-500">{item.assetId ? 'Activo Serializado' : 'Insumo a Granel'}</td>
-                          <td className="px-3 py-2 font-bold text-slate-900">
+                        <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-[#162744]">
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{item.assetId ? 'Activo Serializado' : 'Insumo a Granel'}</td>
+                          <td className="px-3 py-2 font-bold text-slate-900 dark:text-white">
                             {item.assetId ? `${item.brand} ${item.model}` : item.consumableName}
                           </td>
                           <td className="px-3 py-2 font-mono">
                             {item.serialNumber ? (
-                              <div className="font-bold text-slate-900">
-                                S/N: {item.serialNumber} {item.inventoryNumber && <span className="text-[#003B70]">[{item.inventoryNumber}]</span>}
+                              <div className="font-bold text-slate-900 dark:text-white">
+                                S/N: {item.serialNumber} {item.inventoryNumber && <span className="text-[#003B70] dark:text-[#38BDF8]">[{item.inventoryNumber}]</span>}
                               </div>
                             ) : (
                               <span className="text-slate-400">No aplica</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 font-bold text-emerald-700">{item.quantity} un.</td>
+                          <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{item.quantity} un.</td>
                           <td className="px-3 py-2">
-                            {item.propertyType ? <PropertyBadge type={item.propertyType} /> : <span className="text-xs text-slate-500 font-semibold">CONSUMIBLE</span>}
+                            {item.propertyType ? <PropertyBadge type={item.propertyType} /> : <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">CONSUMIBLE</span>}
                           </td>
                           <td className="px-3 py-2 text-right">
                             <button
@@ -759,9 +763,9 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
         <div className="gov-card p-5 space-y-4">
           <h3 className="text-sm font-bold text-slate-800">Historial de Actas de Entrega & Devolución Emitidas</h3>
 
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-[#1E3352]">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#003B70] text-white">
+              <thead className="bg-[#003B70] dark:bg-gradient-to-r dark:from-[#002D57] dark:to-[#003B70] text-white">
                 <tr>
                   <th className="px-3 py-2.5 font-bold">Folio Acta</th>
                   <th className="px-3 py-2.5 font-bold">Funcionario Receptor</th>
@@ -773,16 +777,16 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                   <th className="px-3 py-2.5 text-right font-bold">Descarga PDF</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                 {assignments.map(act => (
-                  <tr key={act.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2.5 font-mono font-bold text-[#003B70]">{act.actNumber}</td>
-                    <td className="px-3 py-2.5 font-bold text-slate-900">{act.recipientName}</td>
-                    <td className="px-3 py-2.5 font-mono">{act.recipientRut}</td>
-                    <td className="px-3 py-2.5 font-semibold text-slate-800">{act.branchName}</td>
+                  <tr key={act.id} className="hover:bg-slate-50 dark:hover:bg-[#162744]">
+                    <td className="px-3 py-2.5 font-mono font-bold text-[#003B70] dark:text-[#38BDF8]">{act.actNumber}</td>
+                    <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white">{act.recipientName}</td>
+                    <td className="px-3 py-2.5 font-mono text-slate-700 dark:text-slate-300">{act.recipientRut}</td>
+                    <td className="px-3 py-2.5 font-semibold text-slate-800 dark:text-slate-200">{act.branchName}</td>
                     <td className="px-3 py-2.5 font-bold">{act.items.length} ítems</td>
                     <td className="px-3 py-2.5"><AssignmentStatusBadge status={act.status} /></td>
-                    <td className="px-3 py-2.5 text-slate-500">{formatDate(act.createdAt)}</td>
+                    <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400">{formatDate(act.createdAt)}</td>
                     <td className="px-3 py-2.5 text-right">
                       <button
                         onClick={() => PDFService.downloadActPDF(act)}
