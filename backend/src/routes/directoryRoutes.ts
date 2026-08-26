@@ -22,7 +22,8 @@ directoryRouter.get('/users/search', async (req: Request, res: Response): Promis
     const query = q ? String(q).trim() : '';
 
     // Si hay búsqueda activa y LDAP está configurado, consultar en vivo y auto-sincronizar
-    if (query.length >= 2 && process.env.LDAP_BIND_PASSWORD) {
+    const hasBindPass = Boolean(process.env.LDAP_CHA_BIND_PASSWORD || process.env.LDAP_BIND_PASSWORD);
+    if (query.length >= 2 && hasBindPass) {
       try {
         await LdapService.syncUsersToCache(query);
       } catch (err: any) {
@@ -81,7 +82,8 @@ directoryRouter.get('/users/search', async (req: Request, res: Response): Promis
 directoryRouter.post('/sync', async (_req: Request, res: Response): Promise<void> => {
   try {
     let syncedFromLdap = 0;
-    if (process.env.LDAP_BIND_PASSWORD) {
+    const hasBindPass = Boolean(process.env.LDAP_CHA_BIND_PASSWORD || process.env.LDAP_BIND_PASSWORD);
+    if (hasBindPass) {
       syncedFromLdap = await LdapService.syncUsersToCache();
     }
 

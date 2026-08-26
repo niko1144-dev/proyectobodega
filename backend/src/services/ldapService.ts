@@ -497,14 +497,9 @@ export class LdapService {
             'employeeID',
             'telephoneNumber',
             'physicalDeliveryOfficeName'
-          ]
+          ],
+          paged: true
         };
-
-        if (isFullSync || !cleanQuery) {
-          searchOptions.paged = { pageSize: 500 };
-        } else {
-          searchOptions.sizeLimit = 50;
-        }
 
         const { searchEntries } = await client.search(chaConfig.baseDN, searchOptions);
         for (const entry of searchEntries as any[]) {
@@ -521,8 +516,8 @@ export class LdapService {
       }
     }
 
-    // 2. Buscar en IPS solo si no es sincronización completa masiva o si se especificó búsqueda concreta
-    if (ipsConfig.isEnabled && ipsConfig.bindPassword && ipsConfig.bindPassword !== 'cha.2029') {
+    // 2. Buscar en IPS (Fallback)
+    if (ipsConfig.isEnabled && ipsConfig.bindPassword && ipsConfig.url && !ipsConfig.url.includes('sips01.ips.gob.cl')) {
       let client: Client | null = null;
       try {
         client = this.createClient(ipsConfig);
@@ -557,13 +552,12 @@ export class LdapService {
             'telephoneNumber',
             'physicalDeliveryOfficeName'
           ],
-          sizeLimit: isFullSync ? 500 : 30
+          paged: true
         };
 
         const { searchEntries } = await client.search(ipsConfig.baseDN, searchOptions);
         for (const entry of searchEntries as any[]) {
           const user = this.parseLdapEntry(entry, 'IPS', ipsConfig.defaultEmailDomain);
-          // Si ya existía en ChileAtiende, prevalece ChileAtiende según la regla de negocio
           if (!seenUsernames.has(user.username.toLowerCase())) {
             seenUsernames.add(user.username.toLowerCase());
             results.push(user);
