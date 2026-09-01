@@ -1,5 +1,6 @@
 import { Client } from 'ldapts';
 import { prisma } from '../config/db.js';
+import { LdapSyncService, SyncReport } from './ldapSyncService.js';
 
 export type DomainOrigin = 'CHILEATIENDE' | 'IPS';
 
@@ -470,13 +471,13 @@ export class LdapService {
         await client.bind(chaConfig.bindUser || '', chaConfig.bindPassword);
 
         const words = cleanQuery.split(/\s+/).filter(w => w.length > 0);
-        let filter = '(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(sAMAccountName=*$)))';
+        let filter = '(&(objectClass=user)(objectCategory=person)(!(sAMAccountName=*$)))';
 
         if (words.length > 0) {
           const wordFilters = words.map(w =>
             `(|(sAMAccountName=*${w}*)(displayName=*${w}*)(givenName=*${w}*)(sn=*${w}*)(mail=*${w}*)(employeeID=*${w}*)(description=*${w}*))`
           ).join('');
-          filter = `(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(sAMAccountName=*$))${wordFilters})`;
+          filter = `(&(objectClass=user)(objectCategory=person)(!(sAMAccountName=*$))${wordFilters})`;
         }
 
         const searchOptions: any = {
@@ -524,13 +525,13 @@ export class LdapService {
         await client.bind(ipsConfig.bindUser || '', ipsConfig.bindPassword);
 
         const words = cleanQuery.split(/\s+/).filter(w => w.length > 0);
-        let filter = '(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(sAMAccountName=*$)))';
+        let filter = '(&(objectClass=user)(objectCategory=person)(!(sAMAccountName=*$)))';
 
         if (words.length > 0) {
           const wordFilters = words.map(w =>
             `(|(sAMAccountName=*${w}*)(displayName=*${w}*)(givenName=*${w}*)(sn=*${w}*)(mail=*${w}*)(employeeID=*${w}*)(description=*${w}*))`
           ).join('');
-          filter = `(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(sAMAccountName=*$))${wordFilters})`;
+          filter = `(&(objectClass=user)(objectCategory=person)(!(sAMAccountName=*$))${wordFilters})`;
         }
 
         const searchOptions: any = {
@@ -672,12 +673,18 @@ export class LdapService {
 
   /**
    * 5. Sincronización de Usuarios hacia la Base de Datos PostgreSQL
+   * Si es sincronización completa sin query, utiliza LdapSyncService con consolidación dual y precedencia.
    */
   public static async syncUsersToCache(query: string = ''): Promise<number> {
     const isFullSync = !query.trim();
-    console.log(`⏳ [LDAP Sync] Iniciando ${isFullSync ? 'sincronización COMPLETA' : 'búsqueda en vivo'} desde Active Directory (CHA + IPS)...`);
 
-    const users = await this.searchUsersInAD(query, isFullSync);
+    if (isFullSync) {
+      const report = await LdapSyncService.syncDualDirectory();
+      return report.totalConsolidated;
+    }
+
+    console.log(`⏳ [LDAP Search Sync] Búsqueda en vivo y sincronización para '${query}'...`);
+    const users = await this.searchUsersInAD(query, false);
     if (users.length === 0) return 0;
 
     let syncedCount = 0;
@@ -722,7 +729,6 @@ export class LdapService {
             });
             syncedCount++;
           } catch (err: any) {
-            // Manejo de colisión de RUT si aplica (asignando RUT único basado en GUID o username)
             try {
               const fallbackRut = `${u.domainOrigin === 'CHILEATIENDE' ? 'CHA' : 'IPS'}-${u.username}-${Math.floor(100 + Math.random() * 900)}`;
               await prisma.userADCache.upsert({
@@ -762,4 +768,14 @@ export class LdapService {
     console.log(`✅ [LDAP Sync] Sincronización finalizada: ${syncedCount} funcionarios actualizados en PostgreSQL.`);
     return syncedCount;
   }
+
+  /**
+   * 6. Ejecuta sincronización dual completa (cha.cl e ips.gob.cl) con reporte estructurado
+   */
+  public static async syncDualDirectory(): Promise<SyncReport> {
+    return await LdapSyncService.syncDualDirectory();
+  }
 }
+
+export { LdapSyncService };
+

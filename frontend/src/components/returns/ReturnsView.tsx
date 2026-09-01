@@ -43,7 +43,11 @@ export const ReturnsView: React.FC = () => {
       ApiClient.getAssignments(),
       ApiClient.getBranches()
     ]);
-    setAssignments(active.filter(a => a.status !== 'DEVUELTO_COMPLETO' && a.status !== 'ANULADO'));
+    setAssignments(active.filter(a => 
+      a.status !== 'DEVUELTO_COMPLETO' && 
+      a.status !== 'ANULADO' && 
+      a.items.some((i: any) => !i.isReturned && i.assetId)
+    ));
     setBranches(bList);
   };
 

@@ -4,7 +4,8 @@ import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { Assignment } from '../types/assignment';
 import { Asset, TimelineEvent } from '../types/asset';
-import { formatDate, formatDateTime } from '../utils/formatters';
+import { TopDeliveredResponse, TopDeliveredProduct } from '../types/dashboard';
+import { formatDate, formatDateTime, extractAssignedPersonAndCleanReason } from '../utils/formatters';
 
 export class PDFService {
   /**
@@ -475,34 +476,47 @@ export class PDFService {
     doc.setTextColor(15, 105, 180);
     doc.text(`HISTORIAL CRONOLÓGICO DE MOVIMIENTOS (${timeline.length} REGISTROS)`, 14, currentY);
 
-    const tableBody = timeline.map(evt => [
-      formatDateTime(evt.timestamp),
-      evt.title,
-      evt.branchName,
-      evt.actor,
-      evt.documentRef || 'N/A',
-      evt.details?.recipientName ? `Receptor: ${evt.details.recipientName} (${evt.details.recipientRut || ''})` : (evt.details?.changeReason || evt.details?.observations || '-')
-    ]);
+    const tableBody = timeline.map(evt => {
+      const rawReason = evt.details?.changeReason || evt.details?.observations || '';
+      const explicitAssigned = evt.assignedTo || evt.details?.recipientName || evt.details?.newUserName || evt.details?.assignedTo;
+      const { assignedPerson, cleanReason } = extractAssignedPersonAndCleanReason(rawReason, explicitAssigned);
+      
+      const assignedText = assignedPerson 
+        ? `${assignedPerson}${evt.details?.recipientRut ? `\n(RUT: ${evt.details.recipientRut})` : ''}`
+        : '-';
+      const detailText = cleanReason || '-';
+
+      return [
+        formatDateTime(evt.timestamp),
+        evt.title,
+        evt.branchName,
+        evt.actor,
+        assignedText,
+        evt.documentRef || 'N/A',
+        detailText
+      ];
+    });
 
     autoTable(doc, {
       startY: currentY + 3,
-      head: [['Fecha / Hora', 'Tipo de Movimiento', 'Bodega / Sucursal', 'Responsable', 'Documento Ref.', 'Detalle / Observaciones']],
+      head: [['Fecha / Hora', 'Tipo de Movimiento', 'Bodega / Sucursal', 'Responsable', 'Asignado a', 'Doc. Referencia', 'Observaciones']],
       body: tableBody,
       theme: 'grid',
       headStyles: {
         fillColor: [15, 105, 180],
         textColor: 255,
-        fontSize: 7.5,
+        fontSize: 7,
         fontStyle: 'bold'
       },
-      styles: { fontSize: 7, cellPadding: 2 },
+      styles: { fontSize: 6.5, cellPadding: 1.8 },
       columnStyles: {
-        0: { cellWidth: 28 },
-        1: { cellWidth: 35, fontStyle: 'bold' },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 28 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 42 }
+        0: { cellWidth: 23 },
+        1: { cellWidth: 32, fontStyle: 'bold' },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 24 },
+        4: { cellWidth: 30, fontStyle: 'bold' },
+        5: { cellWidth: 24 },
+        6: { cellWidth: 32 }
       }
     });
 
@@ -691,5 +705,391 @@ export class PDFService {
     if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
       doc.save(`Acta_Traspaso_${data.documentRef}.pdf`);
     }
+  }
+
+  /**
+   * Genera el Informe Oficial y Gráfico del Top 5 de Productos Más Entregados en PDF
+   */
+  public static async generateTopDeliveredProductsPDF(data: {
+    reportData: TopDeliveredResponse;
+    periodLabel: string;
+    filterTypeLabel: string;
+    generatedByName?: string;
+  }): Promise<jsPDF> {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'letter'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const now = new Date();
+    const folio = `RPT-TOP5-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // 1. Membrete Institucional
+    doc.setFillColor(15, 105, 180); // Azul ChileAtiende #0F69B4
+    doc.rect(0, 0, pageWidth, 6, 'F');
+
+    doc.setFillColor(235, 59, 69); // Rojo Gobierno #EB3B45
+    doc.rect(0, 6, 35, 2.5, 'F');
+    doc.setFillColor(15, 105, 180);
+    doc.rect(35, 6, pageWidth - 35, 2.5, 'F');
+
+    // Logo / Texto de Cabecera
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(15, 105, 180);
+    doc.text('CHILEATIENDE | INSTITUTO DE PREVISIÓN SOCIAL (IPS)', 14, 17);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(90, 100, 110);
+    doc.text('División de Tecnologías de Información (DTI) • Control de Gestión y Estadísticas TI', 14, 22);
+
+    // Folio y Fecha en el extremo derecho
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(20, 30, 45);
+    doc.text(`FOLIO: ${folio}`, pageWidth - 14, 17, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(90, 100, 110);
+    doc.text(`Emisión: ${formatDateTime(now.toISOString())}`, pageWidth - 14, 22, { align: 'right' });
+
+    // Línea divisoria
+    doc.setDrawColor(220, 225, 230);
+    doc.line(14, 26, pageWidth - 14, 26);
+
+    // Título Principal
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12.5);
+    doc.setTextColor(11, 67, 117);
+    doc.text('INFORME ESTADÍSTICO: TOP 5 PRODUCTOS MÁS ENTREGADOS', pageWidth / 2, 33, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Consolidado oficial de asignaciones, equipamiento tecnológico e insumos computacionales', pageWidth / 2, 37.5, { align: 'center' });
+
+    // 2. Parámetros del Reporte (Grid 2 Columnas)
+    autoTable(doc, {
+      startY: 40.5,
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      columnStyles: {
+        0: { fontStyle: 'bold', textColor: [15, 105, 180], cellWidth: 32 },
+        1: { textColor: [30, 41, 59], cellWidth: 62 },
+        2: { fontStyle: 'bold', textColor: [15, 105, 180], cellWidth: 32 },
+        3: { textColor: [30, 41, 59], cellWidth: 62 }
+      },
+      body: [
+        [
+          'Período Evaluado:', data.periodLabel,
+          'Sucursal / Bodega:', data.reportData.summary.branchName
+        ],
+        [
+          'Tipo de Filtro:', data.filterTypeLabel,
+          'Usuario Emisor:', data.generatedByName || 'Administrador ITAM ChileAtiende'
+        ]
+      ]
+    });
+
+    let currentY = (doc as any).lastAutoTable.finalY + 3;
+
+    // 3. Tarjetas Resumen Ejecutivas (4 KPIs)
+    const cardWidth = (pageWidth - 28 - 9) / 4;
+    const cardHeight = 16;
+    const kpiData = [
+      { label: 'UNIDADES ENTREGADAS', value: `${data.reportData.summary.totalDeliveredUnits} un.`, color: [15, 105, 180] },
+      { label: 'ACTAS GENERADAS', value: `${data.reportData.summary.totalAssignments} actas`, color: [5, 150, 105] },
+      { label: 'PRODUCTO #1 LÍDER', value: data.reportData.items[0]?.name ? (data.reportData.items[0].name.length > 18 ? data.reportData.items[0].name.substring(0, 18) + '...' : data.reportData.items[0].name) : 'Sin datos', color: [217, 119, 6] },
+      { label: 'CUOTA LÍDER TOP 1', value: `${data.reportData.summary.top1DominancePercentage}%`, color: [99, 102, 241] }
+    ];
+
+    for (let i = 0; i < 4; i++) {
+      const kpi = kpiData[i];
+      const cardX = 14 + i * (cardWidth + 3);
+
+      // Fondo de tarjeta
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(cardX, currentY, cardWidth, cardHeight, 1.5, 1.5, 'FD');
+
+      // Franja superior de color
+      doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+      doc.rect(cardX, currentY, cardWidth, 1.5, 'F');
+
+      // Título KPI
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.2);
+      doc.setTextColor(100, 116, 139);
+      doc.text(kpi.label, cardX + 3, currentY + 5.5);
+
+      // Valor KPI
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+      doc.text(kpi.value, cardX + 3, currentY + 12);
+    }
+
+    currentY += cardHeight + 5;
+
+    // 4. Gráfico Vectorial de Barras del Top 5
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(11, 67, 117);
+    doc.text('1. Representación Gráfica del Ranking de Productos Más Entregados', 14, currentY);
+
+    currentY += 4;
+
+    const items = data.reportData.items;
+    if (items.length === 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(140, 150, 160);
+      doc.text('No se registran entregas de productos en el rango de fechas seleccionado.', 14, currentY + 6);
+      currentY += 15;
+    } else {
+      const maxQuantity = Math.max(...items.map(i => i.quantity), 1);
+      const barTrackWidth = 100;
+      const barHeight = 4.5;
+      const rowGap = 8.5;
+
+      const rankColors = [
+        { fill: [15, 105, 180], badge: [245, 158, 11], label: '1°' }, // Oro / Azul
+        { fill: [2, 132, 199], badge: [148, 163, 184], label: '2°' }, // Plata / Cyan
+        { fill: [79, 70, 229], badge: [217, 119, 6], label: '3°' },  // Bronce / Indigo
+        { fill: [217, 119, 6], badge: [100, 116, 139], label: '4°' }, // Slate / Ambar
+        { fill: [124, 58, 237], badge: [71, 85, 105], label: '5°' }   // Slate / Purpura
+      ];
+
+      items.forEach((item, index) => {
+        const itemY = currentY + (index * rowGap);
+        const style = rankColors[index] || rankColors[3];
+
+        // Insignia de Ranking (Recuadro redondeado)
+        doc.setFillColor(style.badge[0], style.badge[1], style.badge[2]);
+        doc.roundedRect(14, itemY, 7, 6, 1, 1, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(255, 255, 255);
+        doc.text(style.label, 17.5, itemY + 4.2, { align: 'center' });
+
+        // Nombre del Producto y Categoría
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(30, 41, 59);
+        const nameDisplay = item.name.length > 32 ? item.name.substring(0, 32) + '...' : item.name;
+        doc.text(nameDisplay, 23, itemY + 4.2);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.8);
+        doc.setTextColor(100, 116, 139);
+        const typeTag = item.itemType === 'HARDWARE' ? 'Hardware' : 'Insumo';
+        doc.text(`[${item.category} • ${typeTag}]`, 23 + doc.getTextWidth(nameDisplay) + 2, itemY + 4.2);
+
+        // Barra de fondo (Track)
+        const barX = pageWidth - 14 - barTrackWidth - 25;
+        doc.setFillColor(241, 245, 249);
+        doc.roundedRect(barX, itemY + 0.8, barTrackWidth, barHeight, 1, 1, 'F');
+
+        // Barra de relleno proporcional
+        const fillWidth = Math.max(3, (item.quantity / maxQuantity) * barTrackWidth);
+        doc.setFillColor(style.fill[0], style.fill[1], style.fill[2]);
+        doc.roundedRect(barX, itemY + 0.8, fillWidth, barHeight, 1, 1, 'F');
+
+        // Texto numérico (Cantidad y Porcentaje)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(style.fill[0], style.fill[1], style.fill[2]);
+        doc.text(`${item.quantity} un.`, pageWidth - 14 - 10, itemY + 4.2, { align: 'right' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`(${item.percentage}%)`, pageWidth - 14, itemY + 4.2, { align: 'right' });
+      });
+
+      currentY += (items.length * rowGap) + 4;
+    }
+
+    // 5. Tabla Detallada de Datos (autoTable)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(11, 67, 117);
+    doc.text('2. Cuadro Estadístico de Demanda y Asignación', 14, currentY);
+
+    const tableData = items.map(item => [
+      `${item.position}°`,
+      item.name,
+      item.category,
+      item.itemType === 'HARDWARE' ? 'Activo TI' : 'Insumo / Periférico',
+      `${item.quantity} un.`,
+      `${item.percentage}%`,
+      `${item.assignmentCount} actas`
+    ]);
+
+    autoTable(doc, {
+      startY: currentY + 2.5,
+      head: [['#', 'Descripción del Producto', 'Categoría / Tipo', 'Clase', 'Total Entregado', '% Participación', 'Frecuencia']],
+      body: tableData.length > 0 ? tableData : [['-', 'Sin entregas en el período', '-', '-', '0 un.', '0%', '0 actas']],
+      theme: 'striped',
+      headStyles: {
+        fillColor: [15, 105, 180],
+        textColor: [255, 255, 255],
+        fontSize: 7.5,
+        fontStyle: 'bold'
+      },
+      styles: { fontSize: 7.2, cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+        1: { cellWidth: 62, fontStyle: 'bold' },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 26 },
+        4: { cellWidth: 22, halign: 'center', fontStyle: 'bold', textColor: [15, 105, 180] },
+        5: { cellWidth: 18, halign: 'center' },
+        6: { cellWidth: 15, halign: 'center' }
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 4;
+
+    // 6. Muestra de Trazabilidad / Entregas Recientes (Evidencia)
+    const recent = data.reportData.recentDeliveries?.slice(0, 4) || [];
+    if (recent.length > 0 && currentY < pageHeight - 55) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(11, 67, 117);
+      doc.text('3. Muestra de Actas de Entrega Recientes en el Período', 14, currentY);
+
+      const recentTableData = recent.map(r => [
+        r.actNumber,
+        formatDate(r.date),
+        r.recipientName,
+        r.recipientRut || '-',
+        r.branchName,
+        r.productName,
+        `${r.quantity} un.`
+      ]);
+
+      autoTable(doc, {
+        startY: currentY + 2.5,
+        head: [['N° Acta', 'Fecha', 'Funcionario Receptor', 'RUT', 'Sucursal', 'Producto Entregado', 'Cant.']],
+        body: recentTableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [70, 90, 110],
+          textColor: [255, 255, 255],
+          fontSize: 7,
+          fontStyle: 'bold'
+        },
+        styles: { fontSize: 6.8, cellPadding: 1.5 },
+        columnStyles: {
+          0: { cellWidth: 24, fontStyle: 'bold' },
+          1: { cellWidth: 20 },
+          2: { cellWidth: 42 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 38 },
+          6: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }
+        }
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 4;
+    }
+
+    // 7. Pie Institucional, QR de Integridad y Firmas
+    const footerY = Math.max(currentY + 2, pageHeight - 34);
+
+    // QR de Validación
+    const qrData = JSON.stringify({
+      reporte: 'TOP5_PRODUCTOS_ENTREGADOS',
+      folio,
+      periodo: data.periodLabel,
+      totalUnidades: data.reportData.summary.totalDeliveredUnits,
+      fechaEmision: now.toISOString(),
+      emisor: data.generatedByName || 'Administrador ITAM',
+      hash: 'CHILEATIENDE-ITAM-VERIFIED-REPORT'
+    });
+
+    const qrDataUrl = await QRCode.toDataURL(qrData, { margin: 0, width: 70 });
+    doc.addImage(qrDataUrl, 'PNG', 14, footerY - 2, 20, 20);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.2);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Validación Digital ITAM ChileAtiende', 36, footerY + 2);
+    doc.text(`Folio Oficial: ${folio}`, 36, footerY + 5.5);
+    doc.text(`Generado: ${formatDateTime(now.toISOString())}`, 36, footerY + 9);
+    doc.text('Sistema de Gestión de Activos TI & Bodega', 36, footerY + 12.5);
+
+    // Recuadros de Firma
+    const signBoxWidth = 52;
+    const signBoxY = footerY + 12;
+
+    // Firma 1: Encargado de Bodega
+    const sign1X = pageWidth - 14 - (signBoxWidth * 2) - 8;
+    doc.setDrawColor(180, 190, 200);
+    doc.line(sign1X, signBoxY, sign1X + signBoxWidth, signBoxY);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(30, 41, 59);
+    doc.text('ENCARGADO DE BODEGA TI', sign1X + signBoxWidth / 2, signBoxY + 3.2, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.2);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Control y Gestión de Inventario', sign1X + signBoxWidth / 2, signBoxY + 6.5, { align: 'center' });
+
+    // Firma 2: Jefatura DTI
+    const sign2X = pageWidth - 14 - signBoxWidth;
+    doc.line(sign2X, signBoxY, sign2X + signBoxWidth, signBoxY);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(30, 41, 59);
+    doc.text('JEFATURA DTI / ADMINISTRADOR', sign2X + signBoxWidth / 2, signBoxY + 3.2, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.2);
+    doc.setTextColor(100, 116, 139);
+    doc.text('División Tecnologías de Información', sign2X + signBoxWidth / 2, signBoxY + 6.5, { align: 'center' });
+
+    return doc;
+  }
+
+  /**
+   * Genera y abre el Informe del Top 5 de Productos en PDF en una nueva ventana o descarga automática
+   */
+  public static async openTopDeliveredProductsPDFInNewWindow(data: {
+    reportData: TopDeliveredResponse;
+    periodLabel: string;
+    filterTypeLabel: string;
+    generatedByName?: string;
+  }): Promise<void> {
+    const doc = await this.generateTopDeliveredProductsPDF(data);
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const newWindow = window.open(blobUrl, '_blank');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+      doc.save(`Informe_Top5_Productos_Entregados_${dateStr}.pdf`);
+    }
+  }
+
+  /**
+   * Descarga directamente el Informe del Top 5 de Productos en PDF
+   */
+  public static async downloadTopDeliveredProductsPDF(data: {
+    reportData: TopDeliveredResponse;
+    periodLabel: string;
+    filterTypeLabel: string;
+    generatedByName?: string;
+  }): Promise<void> {
+    const doc = await this.generateTopDeliveredProductsPDF(data);
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    doc.save(`Informe_Top5_Productos_Entregados_${dateStr}.pdf`);
   }
 }

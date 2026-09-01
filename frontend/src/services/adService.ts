@@ -1,35 +1,36 @@
-// Servicio de Integración y Consulta con Active Directory / Microsoft Entra ID (LDAP)
-import { storage } from '../db/storage';
+// Servicio de Integración y Consulta con Active Directory / Microsoft Entra ID (LDAP + PostgreSQL)
+import { ApiClient } from '../api/client';
 import { ADUser } from '../types/user';
 
 export class ADService {
   /**
-   * Simula consulta en tiempo real vía LDAP / Microsoft Graph API
+   * Consulta en tiempo real los funcionarios de Active Directory sincronizados en la base de datos
    */
-  public static async searchUsers(query: string): Promise<ADUser[]> {
-    // Simular latencia de red de directorio (120ms)
-    await new Promise(resolve => setTimeout(resolve, 120));
-    return storage.searchADUsers(query);
+  public static async searchUsers(query: string = ''): Promise<ADUser[]> {
+    try {
+      return await ApiClient.searchDirectoryUsers(query);
+    } catch {
+      return [];
+    }
   }
 
   /**
    * Obtiene la ficha completa de un funcionario por su RUT o ID
    */
   public static async getUserByRut(rut: string): Promise<ADUser | undefined> {
-    const clean = rut.replace(/[^0-9kK]/g, '').toUpperCase();
-    const users = storage.getADUsers();
-    return users.find(u => u.rut.replace(/[^0-9kK]/g, '').toUpperCase() === clean);
+    try {
+      const users = await ApiClient.searchDirectoryUsers(rut);
+      const clean = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+      return users.find(u => (u.rut || '').replace(/[^0-9kK]/g, '').toUpperCase() === clean);
+    } catch {
+      return undefined;
+    }
   }
 
   /**
-   * Simulación de sincronización nocturna / manual con el Controlador de Dominio (DC)
+   * Sincronización manual / programada con Active Directory
    */
   public static async syncDirectory(): Promise<{ syncedCount: number; timestamp: string }> {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const now = new Date().toISOString();
-    return {
-      syncedCount: storage.getADUsers().length,
-      timestamp: now
-    };
+    return await ApiClient.syncDirectory();
   }
 }

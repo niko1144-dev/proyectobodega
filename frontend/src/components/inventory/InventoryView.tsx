@@ -9,7 +9,10 @@ import {
   History, 
   CheckSquare,
   Square,
-  AlertCircle
+  AlertCircle,
+  Edit3,
+  Save,
+  UserCheck
 } from 'lucide-react';
 import { storage } from '../../db/storage';
 import { Asset, AssetStatus, AssetType } from '../../types/asset';
@@ -20,7 +23,7 @@ import { Modal } from '../common/Modal';
 import { SearchableSelect } from '../common/SearchableSelect';
 import { ExcelService } from '../../services/excelService';
 import { PDFService } from '../../services/pdfService';
-import { formatDate, formatDateTime, normalizeText } from '../../utils/formatters';
+import { formatDate, formatDateTime, normalizeText, extractAssignedPersonAndCleanReason } from '../../utils/formatters';
 import { ApiClient } from '../../api/client';
 
 interface InventoryViewProps {
@@ -53,6 +56,20 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [statusChangeModalAsset, setStatusChangeModalAsset] = useState<Asset | null>(null);
   const [newStatusChoice, setNewStatusChoice] = useState<AssetStatus>('EN_MANTENCION');
   const [statusChangeReason, setStatusChangeReason] = useState<string>('');
+
+  // Modal de Edición de Activo / Asignación de N° de Inventario
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [editInventoryNumber, setEditInventoryNumber] = useState<string>('');
+  const [editBrand, setEditBrand] = useState<string>('');
+  const [editModel, setEditModel] = useState<string>('');
+  const [editAssetTypeId, setEditAssetTypeId] = useState<string>('');
+  const [editLocationDetail, setEditLocationDetail] = useState<string>('');
+  const [editCpu, setEditCpu] = useState<string>('');
+  const [editRam, setEditRam] = useState<string>('');
+  const [editStorage, setEditStorage] = useState<string>('');
+  const [editNotes, setEditNotes] = useState<string>('');
+  const [editModalError, setEditModalError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
 
   const loadData = async () => {
     const [allAssets, b, types] = await Promise.all([
@@ -147,6 +164,55 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       loadData();
     } catch (err: any) {
       setStatusModalError(err.message || 'Error al cambiar el estado del activo.');
+    }
+  };
+
+  const handleOpenEdit = (asset: Asset) => {
+    setEditingAsset(asset);
+    setEditInventoryNumber(asset.inventoryNumber || '');
+    setEditBrand(asset.brand || '');
+    setEditModel(asset.model || '');
+    setEditAssetTypeId(asset.assetTypeId || (assetTypes[0]?.id || ''));
+    setEditLocationDetail(asset.locationDetail || '');
+    setEditCpu(asset.specifications?.cpu || '');
+    setEditRam(asset.specifications?.ram || '');
+    setEditStorage(asset.specifications?.storage || '');
+    setEditNotes(asset.notes || '');
+    setEditModalError(null);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAsset) return;
+    setEditModalError(null);
+
+    if (!editBrand.trim() || !editModel.trim()) {
+      setEditModalError('La Marca y el Modelo son obligatorios.');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      await ApiClient.updateAsset(editingAsset.id, {
+        inventoryNumber: editInventoryNumber.trim() ? editInventoryNumber.trim().toUpperCase() : null,
+        brand: editBrand.trim(),
+        model: editModel.trim(),
+        assetTypeId: editAssetTypeId,
+        locationDetail: editLocationDetail.trim() || undefined,
+        specifications: {
+          cpu: editCpu.trim() || undefined,
+          ram: editRam.trim() || undefined,
+          storage: editStorage.trim() || undefined
+        },
+        notes: editNotes.trim() || undefined
+      });
+
+      setEditingAsset(null);
+      await loadData();
+    } catch (err: any) {
+      setEditModalError(err.message || 'Error al actualizar el activo.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -265,13 +331,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3.5 font-bold">Identificadores</th>
+                <th className="px-4 py-3.5 font-bold whitespace-nowrap">Identificadores</th>
                 <th className="px-4 py-3.5 font-bold">Dispositivo / Modelo</th>
-                <th className="px-4 py-3.5 font-bold">Modalidad</th>
-                <th className="px-4 py-3.5 font-bold">Estado Operativo</th>
+                <th className="px-4 py-3.5 font-bold whitespace-nowrap">Modalidad</th>
+                <th className="px-4 py-3.5 font-bold whitespace-nowrap">Estado Operativo</th>
                 <th className="px-4 py-3.5 font-bold">Custodia / Ubicación</th>
-                <th className="px-4 py-3.5 font-bold">Respaldo Ingreso</th>
-                <th className="px-4 py-3.5 text-right font-bold">Acciones</th>
+                <th className="px-4 py-3.5 font-bold whitespace-nowrap">Respaldo Ingreso</th>
+                <th className="px-4 py-3.5 text-right font-bold whitespace-nowrap">Acciones</th>
               </tr>
             </thead>
 
@@ -302,7 +368,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       </td>
 
                       {/* Identificadores */}
-                      <td className="px-4 py-3 font-mono">
+                      <td className="px-4 py-3 font-mono whitespace-nowrap">
                         <div className="font-bold text-slate-900 dark:text-white text-sm">{asset.serialNumber}</div>
                         {asset.inventoryNumber ? (
                           <div className="text-xs font-bold text-[#003B70] dark:text-[#38BDF8] mt-0.5">
@@ -320,12 +386,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       </td>
 
                       {/* Modalidad */}
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <PropertyBadge type={asset.propertyType} />
                       </td>
 
                       {/* Estado */}
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <StatusBadge status={asset.status} />
                       </td>
 
@@ -345,7 +411,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       </td>
 
                       {/* Respaldo Documental */}
-                      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         <div>Guía: <strong className="text-slate-700 dark:text-slate-200">{asset.dispatchGuideNumber}</strong></div>
                         {asset.purchaseOrderNumber && <div>OC: {asset.purchaseOrderNumber}</div>}
                         {asset.leasingContractNumber && (
@@ -356,8 +422,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       </td>
 
                       {/* Acciones */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleOpenEdit(asset)}
+                            title="Editar Datos / N° Inventario"
+                            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-[#38BDF8] hover:bg-slate-100 dark:hover:bg-[#162744] rounded-lg transition-colors"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+
                           <button
                             onClick={() => setSelectedAssetForQR(asset)}
                             title="Ver Código QR / Etiqueta"
@@ -416,12 +490,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <span className="text-slate-500 dark:text-slate-400">N° de Serie:</span>
                   <p className="font-mono font-bold text-slate-900 dark:text-white text-sm">{selectedAssetForDetail.serialNumber}</p>
                 </div>
-                {selectedAssetForDetail.inventoryNumber && (
-                  <div>
-                    <span className="text-slate-500 dark:text-slate-400">N° Inventario Institucional:</span>
-                    <p className="font-mono font-bold text-[#003B70] dark:text-[#38BDF8]">{selectedAssetForDetail.inventoryNumber}</p>
-                  </div>
-                )}
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400">N° Inventario Institucional:</span>
+                  <p className="font-mono font-bold text-[#003B70] dark:text-[#38BDF8]">
+                    {selectedAssetForDetail.inventoryNumber || '(Sin N° asignado)'}
+                  </p>
+                </div>
                 <div>
                   <span className="text-slate-500 dark:text-slate-400">Modalidad:</span>
                   <div className="mt-1"><PropertyBadge type={selectedAssetForDetail.propertyType} /></div>
@@ -474,38 +548,229 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </div>
 
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {storage.getAuditLogs(selectedAssetForDetail.id).map(log => (
-                  <div key={log.id} className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] flex justify-between items-center text-[11px]">
-                    <div>
-                      <p className="font-bold text-slate-800 dark:text-white">{log.changeReason}</p>
-                      <span className="text-slate-500 dark:text-slate-400">Por: {log.changedByUserName} • {log.branchName}</span>
+                {storage.getAuditLogs(selectedAssetForDetail.id).map(log => {
+                  const parsed = extractAssignedPersonAndCleanReason(log.changeReason, log.newUserName);
+                  return (
+                    <div key={log.id} className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] flex justify-between items-center text-[11px] gap-2">
+                      <div className="min-w-0 space-y-1">
+                        {parsed.assignedPerson && (
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 font-bold text-[10px]">
+                            <UserCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span>Asignado a: {parsed.assignedPerson}</span>
+                          </div>
+                        )}
+                        <p className="font-bold text-slate-800 dark:text-white truncate">
+                          {parsed.cleanReason || (parsed.assignedPerson ? 'Asignación a funcionario' : log.changeReason)}
+                        </p>
+                        <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Por: {log.changedByUserName} • {log.branchName}</span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <StatusBadge status={log.newStatus} />
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{formatDateTime(log.timestamp)}</div>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <StatusBadge status={log.newStatus} />
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{formatDateTime(log.timestamp)}</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Botones */}
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-[#1E3352]">
+            <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-[#1E3352]">
               <button
-                onClick={() => PDFService.generateAssetStickersPDF([selectedAssetForDetail])}
-                className="gov-btn-secondary"
+                type="button"
+                onClick={() => {
+                  const target = selectedAssetForDetail;
+                  setSelectedAssetForDetail(null);
+                  handleOpenEdit(target);
+                }}
+                className="gov-btn-secondary text-blue-700 dark:text-[#38BDF8]"
               >
-                <Printer className="w-3.5 h-3.5" />
-                Imprimir Etiqueta QR
+                <Edit3 className="w-3.5 h-3.5" />
+                Editar Datos / N° Inventario
               </button>
-              <button
-                onClick={() => setSelectedAssetForDetail(null)}
-                className="gov-btn-primary"
-              >
-                Cerrar Ficha
-              </button>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => PDFService.generateAssetStickersPDF([selectedAssetForDetail])}
+                  className="gov-btn-secondary"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Imprimir Etiqueta QR
+                </button>
+                <button
+                  onClick={() => setSelectedAssetForDetail(null)}
+                  className="gov-btn-primary"
+                >
+                  Cerrar Ficha
+                </button>
+              </div>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Modal Editar Activo & Asignar N° Inventario */}
+      {editingAsset && (
+        <Modal
+          isOpen={!!editingAsset}
+          onClose={() => setEditingAsset(null)}
+          title="Editar Información del Activo"
+          subtitle={`Serie: ${editingAsset.serialNumber} • Modalidad: ${editingAsset.propertyType}`}
+          maxWidth="lg"
+        >
+          <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+            {editModalError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 flex items-center gap-2 animate-in fade-in duration-150">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#E4002B]" />
+                <span>{editModalError}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  N° de Serie <span className="text-[10px] text-slate-400 font-normal">(Inmutable)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingAsset.serialNumber}
+                  disabled
+                  className="gov-input bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono font-bold cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  N° Inventario Institucional <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editInventoryNumber}
+                  onChange={(e) => setEditInventoryNumber(e.target.value)}
+                  placeholder="Ej: CA-NB-2026-00450"
+                  className="gov-input font-mono font-bold text-[#003B70] dark:text-[#38BDF8]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Marca *</label>
+                <input
+                  type="text"
+                  value={editBrand}
+                  onChange={(e) => setEditBrand(e.target.value)}
+                  placeholder="Ej: Lenovo, HP, Dell..."
+                  className="gov-input"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Modelo *</label>
+                <input
+                  type="text"
+                  value={editModel}
+                  onChange={(e) => setEditModel(e.target.value)}
+                  placeholder="Ej: ThinkPad T14, ProDesk 400..."
+                  className="gov-input"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Tipo de Hardware *</label>
+              <SearchableSelect
+                value={editAssetTypeId}
+                onChange={(val) => setEditAssetTypeId(val)}
+                options={assetTypes.map(t => ({
+                  value: t.id,
+                  label: t.name,
+                  badge: t.category
+                }))}
+                placeholder="Seleccione tipo..."
+                searchPlaceholder="Filtrar tipo de hardware..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Detalle de Ubicación en Sucursal</label>
+              <input
+                type="text"
+                value={editLocationDetail}
+                onChange={(e) => setEditLocationDetail(e.target.value)}
+                placeholder="Ej: Estante B3, Módulo de Atención N° 4..."
+                className="gov-input"
+              />
+            </div>
+
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0D182B] border border-slate-200 dark:border-[#1E3352] space-y-2">
+              <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider">Especificaciones Técnicas (Opcional)</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-slate-500 text-[10px] mb-0.5">CPU / Procesador</label>
+                  <input
+                    type="text"
+                    value={editCpu}
+                    onChange={(e) => setEditCpu(e.target.value)}
+                    placeholder="Ej: Intel Core i5 1335U"
+                    className="gov-input text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-500 text-[10px] mb-0.5">Memoria RAM</label>
+                  <input
+                    type="text"
+                    value={editRam}
+                    onChange={(e) => setEditRam(e.target.value)}
+                    placeholder="Ej: 16GB DDR5"
+                    className="gov-input text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-500 text-[10px] mb-0.5">Almacenamiento</label>
+                  <input
+                    type="text"
+                    value={editStorage}
+                    onChange={(e) => setEditStorage(e.target.value)}
+                    placeholder="Ej: 512GB NVMe SSD"
+                    className="gov-input text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Notas / Observaciones</label>
+              <textarea
+                rows={2}
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                placeholder="Observaciones adicionales sobre el equipo..."
+                className="gov-input"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-[#1E3352]">
+              <button
+                type="button"
+                onClick={() => setEditingAsset(null)}
+                className="gov-btn-secondary"
+                disabled={isSavingEdit}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="gov-btn-primary"
+                disabled={isSavingEdit}
+              >
+                <Save className="w-3.5 h-3.5" />
+                {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 

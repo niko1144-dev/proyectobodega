@@ -1,13 +1,73 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/db.js';
 import { AssignmentStatus, AssignmentType, AssetStatus, PhysicalCondition, StockMovementType } from '@prisma/client';
+import { EmailService } from '../services/emailService.js';
 
 export const assignmentRouter = Router();
+
+// ==========================================
+// RESERVAS Y CONTROL DE CONCURRENCIA
+// ==========================================
+
+// Reservar un ítem temporalmente para evitar asignación concurrente
+assignmentRouter.post('/reserve', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { itemType, itemId, quantity, userId } = req.body;
+    
+    // Limpiar reservas expiradas
+    await prisma.itemReservation.deleteMany({
+      where: { expiresAt: { lt: new Date() } }
+    });
+
+    // Verificar si ya está reservado por OTRO usuario
+    const existing = await prisma.itemReservation.findUnique({
+      where: { itemType_itemId: { itemType, itemId } }
+    });
+
+    if (existing && existing.reservedByUserId !== userId && existing.expiresAt > new Date()) {
+      res.status(409).json({ error: 'Este ítem ya se encuentra reservado temporalmente por otro técnico.' });
+      return;
+    }
+
+    // Crear o renovar la reserva (por 15 minutos)
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const reservation = await prisma.itemReservation.upsert({
+      where: { itemType_itemId: { itemType, itemId } },
+      update: { reservedByUserId: userId, quantity: quantity || 1, expiresAt },
+      create: { itemType, itemId, quantity: quantity || 1, reservedByUserId: userId, expiresAt }
+    });
+
+    res.json({ success: true, reservation });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Error al reservar el ítem', details: error.message });
+  }
+});
+
+// Liberar la reserva de un ítem
+assignmentRouter.post('/unreserve', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { itemType, itemId, userId } = req.body;
+    await prisma.itemReservation.deleteMany({
+      where: { itemType, itemId, reservedByUserId: userId }
+    });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Error al liberar reserva', details: error.message });
+  }
+});
+
 
 // Listar todas las asignaciones
 assignmentRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
+    const { recipientUserId } = req.query;
+    const where: any = {};
+    if (recipientUserId) {
+      where.recipientUserId = String(recipientUserId);
+    }
+
     const assignments = await prisma.assignment.findMany({
+      where,
       include: {
         recipientUser: true,
         technicianUser: true,
@@ -96,7 +156,9 @@ assignmentRouter.post('/', async (req: Request, res: Response): Promise<void> =>
       recipientDepartment,
       technicianName,
       technicianRut,
-      branchName
+      branchName,
+      actDocumentPdfBase64,
+      sendEmail
     } = req.body;
 
     if (!items || items.length === 0) {
@@ -334,6 +396,14 @@ assignmentRouter.post('/', async (req: Request, res: Response): Promise<void> =>
         }
       }
 
+      // Eliminar reservas de los ítems recién asignados
+      const reservedItemIds = items.map((i: any) => i.assetId || i.consumableId).filter(Boolean);
+      if (reservedItemIds.length > 0) {
+        await tx.itemReservation.deleteMany({
+          where: { itemId: { in: reservedItemIds }, reservedByUserId: technician.id }
+        });
+      }
+
       return assignment;
     });
 
@@ -400,7 +470,52 @@ assignmentRouter.post('/', async (req: Request, res: Response): Promise<void> =>
       }))
     };
 
-    res.status(201).json({ success: true, assignment: formattedAssignment });
+    // Envío automático del Acta por correo electrónico vía Relay Institucional
+    const targetEmail = recipientEmail || formattedAssignment.recipientEmail;
+    if (sendEmail !== false && targetEmail && targetEmail.includes('@')) {
+      const emailItems = formattedAssignment.items.map(i => ({
+        name: i.brand ? `${i.brand} ${i.model || ''}`.trim() : (i.assetTypeName || i.consumableName || 'Ítem Asignado'),
+        brand: i.brand,
+        model: i.model,
+        serialNumber: i.serialNumber,
+        inventoryNumber: i.inventoryNumber,
+        category: i.assetTypeName || 'Insumo / Periférico',
+        quantity: i.quantity,
+        itemType: (i.assetId || i.serialNumber ? 'HARDWARE' : 'CONSUMABLE') as 'HARDWARE' | 'CONSUMABLE'
+      }));
+
+      // Disparar envío asíncrono
+      EmailService.sendAssignmentActEmail({
+        recipientEmail: targetEmail,
+        recipientName: formattedAssignment.recipientName,
+        recipientRut: formattedAssignment.recipientRut,
+        recipientJobTitle: formattedAssignment.recipientJobTitle,
+        recipientDepartment: formattedAssignment.recipientDepartment,
+        actNumber: formattedAssignment.actNumber,
+        assignmentType: formattedAssignment.assignmentType,
+        branchName: formattedAssignment.branchName,
+        technicianName: formattedAssignment.technicianName,
+        technicianRut: formattedAssignment.technicianRut,
+        createdAt: formattedAssignment.createdAt,
+        items: emailItems,
+        observations: formattedAssignment.observations,
+        pdfBase64: actDocumentPdfBase64 || undefined
+      }).then(res => {
+        if (res.success) {
+          console.log(`[AssignmentRoutes] ✓ Acta ${formattedAssignment.actNumber} enviada por correo a ${targetEmail}`);
+        } else {
+          console.warn(`[AssignmentRoutes] ✗ No se pudo enviar el correo del acta ${formattedAssignment.actNumber}: ${res.error}`);
+        }
+      }).catch(err => {
+        console.error('[AssignmentRoutes] Error en envío asíncrono de correo:', err);
+      });
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      assignment: formattedAssignment,
+      emailSentTo: targetEmail || null
+    });
   } catch (error: any) {
     console.error('Error creating assignment:', error);
     res.status(500).json({ error: 'Error al registrar la asignación', details: error.message });
@@ -510,3 +625,96 @@ assignmentRouter.post('/:id/return', async (req: Request, res: Response): Promis
     res.status(500).json({ error: 'Error al procesar devolución', details: error.message });
   }
 });
+
+// Reenviar Acta Oficial por Correo Electrónico vía Relay Institucional
+assignmentRouter.post('/:id/send-email', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const { targetEmail, pdfBase64 } = req.body;
+
+    const assignment = await prisma.assignment.findFirst({
+      where: {
+        OR: [
+          { id },
+          { actNumber: id }
+        ]
+      },
+      include: {
+        recipientUser: true,
+        technicianUser: true,
+        branch: true,
+        items: {
+          include: {
+            asset: { include: { assetType: true } },
+            consumable: true
+          }
+        }
+      }
+    });
+
+    if (!assignment) {
+      res.status(404).json({ error: 'Acta de asignación no encontrada' });
+      return;
+    }
+
+    const emailToSend = (targetEmail || assignment.recipientUser?.email || '').trim();
+    if (!emailToSend || !emailToSend.includes('@')) {
+      res.status(400).json({ error: 'El funcionario no tiene una dirección de correo válida registrada.' });
+      return;
+    }
+
+    const emailItems = assignment.items.map(i => ({
+      name: i.asset?.brand ? `${i.asset.brand} ${i.asset.model || ''}`.trim() : (i.asset?.assetType?.name || i.consumable?.name || 'Ítem Asignado'),
+      brand: i.asset?.brand,
+      model: i.asset?.model,
+      serialNumber: i.asset?.serialNumber,
+      inventoryNumber: i.asset?.inventoryNumber || undefined,
+      category: i.asset?.assetType?.name || i.consumable?.category || 'General',
+      quantity: i.quantity,
+      itemType: (i.assetId || i.asset ? 'HARDWARE' : 'CONSUMABLE') as 'HARDWARE' | 'CONSUMABLE'
+    }));
+
+    const result = await EmailService.sendAssignmentActEmail({
+      recipientEmail: emailToSend,
+      recipientName: assignment.recipientUser?.fullName || 'Funcionario',
+      recipientRut: assignment.recipientUser?.rut || undefined,
+      recipientJobTitle: assignment.recipientUser?.jobTitle || undefined,
+      recipientDepartment: assignment.recipientUser?.department || undefined,
+      actNumber: assignment.actNumber,
+      assignmentType: assignment.assignmentType,
+      branchName: assignment.branch?.name || 'Sucursal',
+      technicianName: assignment.technicianUser?.fullName || 'Técnico DTI',
+      technicianRut: assignment.technicianUser?.rut || undefined,
+      createdAt: assignment.createdAt,
+      items: emailItems,
+      observations: assignment.observations || undefined,
+      pdfBase64: pdfBase64 || undefined
+    });
+
+    if (!result.success) {
+      res.status(500).json({ error: result.error || 'Error al enviar el correo a través del relay SMTP' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: `Acta ${assignment.actNumber} enviada exitosamente a ${emailToSend} vía relay`,
+      messageId: result.messageId
+    });
+  } catch (error: any) {
+    console.error('Error al reenviar acta por correo:', error);
+    res.status(500).json({ error: 'Error al enviar correo', details: error.message });
+  }
+});
+
+// Probar conectividad SMTP Relay
+assignmentRouter.post('/test-email', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { targetEmail } = req.body;
+    const result = await EmailService.testSmtpConnection(targetEmail);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+

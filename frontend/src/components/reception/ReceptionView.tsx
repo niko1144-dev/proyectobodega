@@ -327,11 +327,6 @@ export const ReceptionView: React.FC = () => {
       return;
     }
 
-    if (propertyType === 'PROPIO' && !cleanInv) {
-      setErrorMsg('Para Activos Propios de ChileAtiende, el Número de Inventario institucional es OBLIGATORIO.');
-      return;
-    }
-
     if (!inputBrand.trim() || !inputModel.trim()) {
       setErrorMsg('Debe especificar Marca y Modelo del equipo.');
       return;
@@ -343,7 +338,7 @@ export const ReceptionView: React.FC = () => {
       return;
     }
 
-    if (propertyType === 'PROPIO' && items.some(i => i.inventoryNumber?.toUpperCase() === cleanInv)) {
+    if (cleanInv && items.some(i => i.inventoryNumber && i.inventoryNumber.toUpperCase() === cleanInv)) {
       setErrorMsg(`El Número de Inventario '${cleanInv}' ya está agregado en la lista actual.`);
       return;
     }
@@ -354,7 +349,7 @@ export const ReceptionView: React.FC = () => {
       return;
     }
 
-    if (propertyType === 'PROPIO' && storage.checkInventoryNumberExists(cleanInv)) {
+    if (cleanInv && storage.checkInventoryNumberExists(cleanInv)) {
       setErrorMsg(`El Número de Inventario '${cleanInv}' ya existe en el inventario.`);
       return;
     }
@@ -362,7 +357,7 @@ export const ReceptionView: React.FC = () => {
     const newItem: ReceptionItem = {
       id: `tmp-${Date.now()}-${Math.random()}`,
       serialNumber: cleanSerial,
-      inventoryNumber: propertyType === 'PROPIO' ? cleanInv : undefined,
+      inventoryNumber: cleanInv || undefined,
       brand: inputBrand.trim(),
       model: inputModel.trim(),
       assetTypeId: typeIdToUse,
@@ -469,8 +464,8 @@ export const ReceptionView: React.FC = () => {
           branchId: selectedBranch.id,
           dispatchDate,
           documentName: uploadedFileName || `Guia_${cleanGuide}.pdf`,
-          receivedByUserId: currentUser.id,
-          receivedByUserName: currentUser.fullName,
+          receivedByUserId: currentUser?.id || 'usr-admin',
+          receivedByUserName: currentUser?.fullName || 'Técnico Bodega',
           propertyType,
           items,
           observations: observations.trim()
@@ -886,7 +881,7 @@ export const ReceptionView: React.FC = () => {
                   <span>Escáner / Entrada Rápida con Pistola</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
                   <div>
                     <label className="block text-slate-700 font-bold mb-1">N° de Serie *</label>
                     <input
@@ -898,18 +893,18 @@ export const ReceptionView: React.FC = () => {
                     />
                   </div>
 
-                  {propertyType === 'PROPIO' && (
-                    <div>
-                      <label className="block text-slate-700 font-bold mb-1">N° Inventario Institucional *</label>
-                      <input
-                        type="text"
-                        value={inputInventory}
-                        onChange={(e) => setInputInventory(e.target.value)}
-                        placeholder="Ej: CA-NB-2026-00450"
-                        className="gov-input font-mono font-bold text-[#003B70]"
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">
+                      N° Inventario <span className="text-[10px] font-normal text-slate-400">(Opcional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={inputInventory}
+                      onChange={(e) => setInputInventory(e.target.value)}
+                      placeholder="Ej: CA-NB-2026-00450"
+                      className="gov-input font-mono font-bold text-[#003B70]"
+                    />
+                  </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -919,7 +914,7 @@ export const ReceptionView: React.FC = () => {
                         onClick={() => {
                           setNewTypeName('');
                           setNewTypeCategory('COMPUTO');
-                          setNewTypeRequiresInv(true);
+                          setNewTypeRequiresInv(false);
                           setNewTypeError(null);
                           setIsCreateTypeModalOpen(true);
                         }}
@@ -943,25 +938,27 @@ export const ReceptionView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">Marca / Modelo *</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={inputBrand}
-                        onChange={(e) => setInputBrand(e.target.value)}
-                        placeholder="Marca"
-                        className="gov-input w-1/2"
-                        required
-                      />
-                      <input
-                        type="text"
-                        value={inputModel}
-                        onChange={(e) => setInputModel(e.target.value)}
-                        placeholder="Modelo"
-                        className="gov-input w-1/2"
-                        required
-                      />
-                    </div>
+                    <label className="block text-slate-700 font-bold mb-1">Marca *</label>
+                    <input
+                      type="text"
+                      value={inputBrand}
+                      onChange={(e) => setInputBrand(e.target.value)}
+                      placeholder="Ej: Lenovo, HP, Dell..."
+                      className="gov-input"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Modelo *</label>
+                    <input
+                      type="text"
+                      value={inputModel}
+                      onChange={(e) => setInputModel(e.target.value)}
+                      placeholder="Ej: ThinkPad T14, ProDesk 400..."
+                      className="gov-input"
+                      required
+                    />
                   </div>
                 </div>
 

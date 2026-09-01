@@ -50,3 +50,9 @@ export interface ADUser {
   avatarUrl?: string;
   lastSyncedAt: string;
 }
+
+export interface IndexedADUser extends ADUser {
+  _searchIndex: string;
+  _cleanRut: string;
+  _isIps: boolean;
+}

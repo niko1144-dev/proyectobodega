@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, 
   UserCheck, 
@@ -19,26 +19,33 @@ import {
   ExternalLink,
   Mail,
   Send,
-  CheckCheck
+  CheckCheck,
+  X,
+  User,
+  Sparkles,
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 import { storage } from '../../db/storage';
 import { Asset, Consumable, ConsumableStock } from '../../types/asset';
 import { Assignment, AssignmentItem, AssignmentType } from '../../types/assignment';
-import { ADUser } from '../../types/user';
+import { ADUser, IndexedADUser } from '../../types/user';
 import { Branch } from '../../types/document';
 import { SignaturePad } from '../common/SignaturePad';
 import { Modal } from '../common/Modal';
-import { formatDate, generateSHA256, validateEmail } from '../../utils/formatters';
+import { formatDate, generateSHA256, validateEmail, normalizeText } from '../../utils/formatters';
 import { PDFService } from '../../services/pdfService';
 import { ApiClient } from '../../api/client';
 import { AssignmentStatusBadge, PropertyBadge } from '../common/Badge';
 import { SearchableSelect } from '../common/SearchableSelect';
+import { useTheme } from '../../context/ThemeContext';
 
 interface AssignmentsViewProps {
   currentBranchId: string;
 }
 
 export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchId }) => {
+  const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'NEW' | 'HISTORY'>('NEW');
 
   // Maestros
@@ -48,9 +55,11 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
   // Bodega de Origen Obligatoria para salida de stock
   const [selectedOriginBranchId, setSelectedOriginBranchId] = useState<string>('');
 
-  // Selector de Funcionarios (Active Directory)
+  // Selector de Funcionarios (Active Directory / Local)
   const [adSearchQuery, setAdSearchQuery] = useState<string>('');
-  const [adSearchResults, setAdSearchResults] = useState<ADUser[]>([]);
+  const [adSearchResults, setAdSearchResults] = useState<IndexedADUser[]>([]);
+  const [allDirectoryUsers, setAllDirectoryUsers] = useState<IndexedADUser[]>([]);
+  const [userDomainFilter, setUserDomainFilter] = useState<'ALL' | 'CHA' | 'IPS'>('ALL');
   const [isSearchingAD, setIsSearchingAD] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<ADUser | null>(null);
 
@@ -73,23 +82,60 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState<boolean>(false);
   const [pendingAssignmentDraft, setPendingAssignmentDraft] = useState<Assignment | null>(null);
   const [receiptEmailInput, setReceiptEmailInput] = useState<string>('');
+  const [shouldSendEmail, setShouldSendEmail] = useState<boolean>(true);
+  const [isResendingEmailId, setIsResendingEmailId] = useState<string | null>(null);
+  const [emailNotification, setEmailNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [signatureModalError, setSignatureModalError] = useState<string | null>(null);
   const [completedAssignment, setCompletedAssignment] = useState<Assignment | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
+  const handleResendEmail = async (act: Assignment) => {
+    setEmailNotification(null);
+    setIsResendingEmailId(act.id);
+    try {
+      let pdfBase64: string | undefined = undefined;
+      try {
+        const pdfDoc = await PDFService.generateAssignmentActPDF(act);
+        pdfBase64 = pdfDoc.output('datauristring');
+      } catch (e) {
+        console.warn('Error al generar PDF para reenvío:', e);
+      }
+
+      await ApiClient.resendAssignmentEmail(act.id, {
+        targetEmail: act.recipientEmail,
+        pdfBase64
+      });
+
+      setEmailNotification({
+        type: 'success',
+        message: `Acta ${act.actNumber} enviada exitosamente por correo a ${act.recipientEmail || 'funcionario'} vía relaycha.cha.cl.`
+      });
+      setTimeout(() => setEmailNotification(null), 5000);
+    } catch (err: any) {
+      setEmailNotification({
+        type: 'error',
+        message: `Error al reenviar acta por correo: ${err.message}`
+      });
+    } finally {
+      setIsResendingEmailId(null);
+    }
+  };
+
   const loadData = async () => {
-    const [b, asgs, assetsData, cns] = await Promise.all([
+    const [b, asgs, assetsData, cns, dirUsers] = await Promise.all([
       ApiClient.getBranches(),
       ApiClient.getAssignments(),
       ApiClient.getAssets({ status: 'BODEGA_DISPONIBLE' }),
-      ApiClient.getConsumables()
+      ApiClient.getConsumables(),
+      ApiClient.getIndexedDirectoryUsers()
     ]);
 
     setBranches(b);
     setAssignments(asgs);
     setAllAssets(assetsData);
     setAvailableConsumables(cns);
+    setAllDirectoryUsers(dirUsers);
 
     // Inicializar sucursal de origen si no está seteada
     if (b.length > 0 && !selectedOriginBranchId) {
@@ -121,20 +167,37 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
     }
   }, [currentBranchId]);
 
-  // Búsqueda en Active Directory
+  // Limpieza de reservas al desmontar el componente si no se ha guardado el acta
+  const itemsRef = useRef(selectedItemsList);
+  useEffect(() => {
+    itemsRef.current = selectedItemsList;
+  }, [selectedItemsList]);
+
+  useEffect(() => {
+    return () => {
+      const currentUser = storage.getCurrentUser();
+      if (currentUser && itemsRef.current.length > 0) {
+        itemsRef.current.forEach(item => {
+          if (item.assetId) {
+            ApiClient.unreserveItem('ASSET', item.assetId, currentUser.id).catch(() => {});
+          } else if (item.consumableId) {
+            ApiClient.unreserveItem('CONSUMABLE', item.consumableId, currentUser.id).catch(() => {});
+          }
+        });
+      }
+    };
+  }, []);
+
+  // Búsqueda instantánea multi-criterio en catálogo local de funcionarios (< 0.05ms)
   useEffect(() => {
     if (!adSearchQuery.trim()) {
       setAdSearchResults([]);
       return;
     }
-    const timer = setTimeout(async () => {
-      setIsSearchingAD(true);
-      const results = await ApiClient.searchDirectoryUsers(adSearchQuery);
-      setAdSearchResults(results);
-      setIsSearchingAD(false);
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [adSearchQuery]);
+
+    const results = ApiClient.filterIndexedUsers(allDirectoryUsers, adSearchQuery, userDomainFilter, 25);
+    setAdSearchResults(results);
+  }, [adSearchQuery, userDomainFilter, allDirectoryUsers]);
 
   const originBranchObj = branches.find(b => b.id === selectedOriginBranchId) || branches[0];
 
@@ -164,7 +227,7 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
     setErrorMsg(null);
   };
 
-  const handleAddAsset = () => {
+  const handleAddAsset = async () => {
     setErrorMsg(null);
     if (!selectedOriginBranchId) {
       setErrorMsg('Debe seleccionar obligatoriamente la Bodega de Origen antes de agregar equipos.');
@@ -187,6 +250,16 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
       return;
     }
 
+    const currentUser = storage.getCurrentUser();
+    if (!currentUser) return;
+
+    try {
+      await ApiClient.reserveItem('ASSET', asset.id, 1, currentUser.id);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Este equipo ya se encuentra reservado por otro usuario.');
+      return;
+    }
+
     const newItem: AssignmentItem = {
       id: `item-${Date.now()}-${Math.random()}`,
       assignmentId: '',
@@ -206,7 +279,7 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
     setSelectedAssetId('');
   };
 
-  const handleAddConsumable = () => {
+  const handleAddConsumable = async () => {
     setErrorMsg(null);
     if (!selectedOriginBranchId) {
       setErrorMsg('Debe seleccionar obligatoriamente la Bodega de Origen antes de agregar insumos.');
@@ -234,7 +307,24 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
       return;
     }
 
+    const currentUser = storage.getCurrentUser();
+    if (!currentUser) return;
+
     const existingIndex = selectedItemsList.findIndex(i => i.consumableId === consumable.id);
+    const qtyToReserve = existingIndex >= 0 ? (selectedItemsList[existingIndex].quantity + consumableQty) : consumableQty;
+
+    if (qtyToReserve > availableStock) {
+      setErrorMsg(`La cantidad total (${qtyToReserve}) excede el stock disponible (${availableStock} un.) en ${originBranchObj?.name}.`);
+      return;
+    }
+
+    try {
+      await ApiClient.reserveItem('CONSUMABLE', consumable.id, qtyToReserve, currentUser.id);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Este insumo ya se encuentra reservado por otro usuario.');
+      return;
+    }
+
     if (existingIndex >= 0) {
       const totalQty = selectedItemsList[existingIndex].quantity + consumableQty;
       if (totalQty > availableStock) {
@@ -261,7 +351,18 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
     setConsumableQty(1);
   };
 
-  const handleRemoveItem = (id: string) => {
+  const handleRemoveItem = async (id: string) => {
+    const itemToRemove = selectedItemsList.find(i => i.id === id);
+    if (itemToRemove) {
+      const currentUser = storage.getCurrentUser();
+      if (currentUser) {
+        if (itemToRemove.assetId) {
+          await ApiClient.unreserveItem('ASSET', itemToRemove.assetId, currentUser.id).catch(() => {});
+        } else if (itemToRemove.consumableId) {
+          await ApiClient.unreserveItem('CONSUMABLE', itemToRemove.consumableId, currentUser.id).catch(() => {});
+        }
+      }
+    }
     setSelectedItemsList(selectedItemsList.filter(i => i.id !== id));
   };
 
@@ -297,9 +398,9 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
       recipientJobTitle: selectedUser.jobTitle,
       recipientDepartment: selectedUser.department,
       recipientBranchName: branchObj.name,
-      technicianUserId: currentUser.id,
-      technicianName: currentUser.fullName,
-      technicianRut: currentUser.rut,
+      technicianUserId: currentUser?.id || 'usr-admin',
+      technicianName: currentUser?.fullName || 'Administrador TI',
+      technicianRut: currentUser?.rut || '',
       branchId: branchObj.id,
       branchName: branchObj.name,
       status: 'PENDIENTE_FIRMA',
@@ -318,7 +419,7 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
     if (!pendingAssignmentDraft) return;
 
     const targetEmail = receiptEmailInput.trim();
-    if (!targetEmail || !validateEmail(targetEmail)) {
+    if (shouldSendEmail && (!targetEmail || !validateEmail(targetEmail))) {
       setSignatureModalError('Debe ingresar un correo electrónico válido para el envío del comprobante.');
       return;
     }
@@ -337,7 +438,20 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
         digitalSignatureHash: hash
       };
 
-      const saved = await ApiClient.createAssignment(payload);
+      // Generar documento PDF para adjuntar directamente al correo
+      let pdfBase64: string | undefined = undefined;
+      try {
+        const pdfDoc = await PDFService.generateAssignmentActPDF(payload);
+        pdfBase64 = pdfDoc.output('datauristring');
+      } catch (pdfErr) {
+        console.warn('No se pudo generar base64 previo del PDF:', pdfErr);
+      }
+
+      const saved = await ApiClient.createAssignment({
+        ...payload,
+        actDocumentPdfBase64: pdfBase64,
+        sendEmail: shouldSendEmail
+      });
       const finalAct = saved.assignment || { ...payload, status: 'FIRMADO_DIGITAL' };
 
       setIsSignatureModalOpen(false);
@@ -439,70 +553,150 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
 
             {!selectedUser ? (
               <div className="space-y-3">
-                <label className="block text-xs text-slate-700 font-bold">
-                  Buscar funcionario por RUT, Nombre, Usuario de Red o Correo Institucional:
-                </label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <label className="block text-xs text-slate-700 font-bold">
+                    Buscar funcionario para el Acta de Asignación:
+                  </label>
+
+                  {/* Filtro Rápido por Dominio */}
+                  <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg text-[11px] font-semibold border border-slate-200 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setUserDomainFilter('ALL')}
+                      className={`px-2.5 py-1 rounded-md transition-all ${userDomainFilter === 'ALL' ? 'bg-[#003B70] text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      Todos ({allDirectoryUsers.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserDomainFilter('CHA')}
+                      className={`px-2.5 py-1 rounded-md transition-all ${userDomainFilter === 'CHA' ? 'bg-[#003B70] text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      ChileAtiende (@cha.cl)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserDomainFilter('IPS')}
+                      className={`px-2.5 py-1 rounded-md transition-all ${userDomainFilter === 'IPS' ? 'bg-blue-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      IPS (@ips.gob.cl)
+                    </button>
+                  </div>
+                </div>
+
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   <input
                     type="text"
                     value={adSearchQuery}
                     onChange={(e) => setAdSearchQuery(e.target.value)}
-                    placeholder="Escriba RUT (ej: 15.678...) o Nombre (ej: Carla Morales)..."
-                    className="gov-input gov-input-with-icon"
+                    placeholder="Escriba Nombre (ej: Carolina Flores), RUT (ej: 15.892.341-8), Usuario o Correo..."
+                    className="gov-input gov-input-with-both-icons font-medium"
                     autoFocus
                   />
-                  {isSearchingAD && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#003B70]">
-                      Consultando AD...
-                    </span>
+                  {adSearchQuery.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => { setAdSearchQuery(''); setAdSearchResults([]); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                      title="Limpiar búsqueda"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
 
-                {adSearchResults.length > 0 && (
-                  <div className="border border-slate-200 bg-white rounded-lg overflow-hidden divide-y divide-slate-100 max-h-56 overflow-y-auto shadow-gov-dropdown">
-                    {adSearchResults.map(u => (
-                      <div
-                        key={u.id}
-                        onClick={() => handleSelectUser(u)}
-                        className="p-3 hover:bg-[#EBF3FA] cursor-pointer flex items-center justify-between text-xs transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#003B70] text-white flex items-center justify-center font-bold">
-                            {u.firstName[0]}{u.lastName[0]}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900">{u.fullName}</div>
-                            <div className="text-[11px] text-slate-500">{u.jobTitle} • {u.department}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-mono font-bold text-[#003B70]">{u.rut}</span>
-                          <div className="text-[10px] text-slate-400">{u.branchName}</div>
-                        </div>
+                {/* Dropdown de Resultados con Microinteracciones */}
+                {adSearchQuery.trim().length > 0 && (
+                  <div className="border border-slate-200 bg-white rounded-xl overflow-hidden shadow-lg animate-in fade-in zoom-in-95 duration-150 mt-1">
+                    <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-600">
+                      <span>Resultados de búsqueda:</span>
+                      <span className="font-bold text-[#003B70]">
+                        {adSearchResults.length} {adSearchResults.length === 1 ? 'funcionario encontrado' : 'funcionarios encontrados'}
+                      </span>
+                    </div>
+
+                    {adSearchResults.length > 0 ? (
+                      <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                        {adSearchResults.map(u => {
+                          const isIps = (u.email || '').toLowerCase().includes('@ips.gob.cl') || (u.department || '').toLowerCase().includes('ips');
+                          const initials = u.fullName
+                            .split(' ')
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map(w => w[0])
+                            .join('')
+                            .toUpperCase() || 'FU';
+
+                          return (
+                            <div
+                              key={u.id || u.samAccountName}
+                              onClick={() => handleSelectUser(u)}
+                              className="p-3.5 hover:bg-[#EBF3FA] cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs transition-colors group"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-9 h-9 rounded-xl ${isIps ? 'bg-gradient-to-br from-blue-600 to-indigo-700' : 'bg-gradient-to-br from-[#003B70] to-[#0055A5]'} text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0`}>
+                                  {initials}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-900 group-hover:text-[#003B70] truncate text-xs sm:text-sm">
+                                      {u.fullName}
+                                    </span>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border shrink-0 ${isIps ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                      {isIps ? 'ips.gob.cl' : 'cha.cl'}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                                    {u.jobTitle || 'Funcionario'} • {u.department || 'Dirección Nacional'}
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 font-mono truncate">
+                                    {u.email}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                <span className="font-mono font-bold text-[#003B70] text-xs sm:text-sm">
+                                  {u.rut || 'Sin RUT'}
+                                </span>
+                                <span className="text-[10px] text-slate-400">
+                                  {u.branchName || 'Sucursal Central'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    ) : (
+                      <div className="p-6 text-center text-slate-500 space-y-1">
+                        <p className="text-xs font-bold text-slate-700">No se encontraron funcionarios coincidentes con "{adSearchQuery}".</p>
+                        <p className="text-[11px] text-slate-400">Intente buscando por nombre, apellido, RUT sin puntos o usuario institucional.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="p-3.5 sm:p-4 rounded-xl bg-[#EBF3FA] border border-[#BFDBFE] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 overflow-hidden">
-                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#003B70] flex items-center justify-center text-white font-extrabold text-sm shadow-sm shrink-0">
-                    {selectedUser.firstName[0]}{selectedUser.lastName[0]}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#EBF3FA] to-[#F1F7FC] border border-[#BFDBFE] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+                  <div className={`w-11 h-11 rounded-xl ${(selectedUser.email || '').toLowerCase().includes('@ips.gob.cl') ? 'bg-gradient-to-br from-blue-600 to-indigo-700' : 'bg-gradient-to-br from-[#003B70] to-[#0055A5]'} flex items-center justify-center text-white font-extrabold text-sm shadow-sm shrink-0`}>
+                    {selectedUser.firstName?.[0] || 'F'}{selectedUser.lastName?.[0] || 'U'}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{selectedUser.fullName}</h4>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0] shrink-0">
-                        Activo AD
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-sm font-black text-[#003B70] truncate">{selectedUser.fullName}</h4>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border shrink-0 ${(selectedUser.email || '').toLowerCase().includes('@ips.gob.cl') ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}`}>
+                        {(selectedUser.email || '').toLowerCase().includes('@ips.gob.cl') ? 'IPS (ips.gob.cl)' : 'ChileAtiende (cha.cl)'}
                       </span>
                     </div>
-                    <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5 truncate">{selectedUser.jobTitle} • {selectedUser.department}</p>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600 mt-1">
-                      <span>RUT: <strong className="text-slate-900 font-mono">{selectedUser.rut}</strong></span>
-                      <span>Correo: <strong className="text-slate-900 break-all">{selectedUser.email}</strong></span>
-                      <span>Sucursal: <strong className="text-slate-900">{selectedUser.branchName}</strong></span>
+                    <p className="text-xs text-slate-700 mt-0.5 truncate font-medium">
+                      {selectedUser.jobTitle || 'Funcionario'} • {selectedUser.department || 'Dirección Nacional'}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 mt-1.5 pt-1.5 border-t border-blue-200/60">
+                      <span>RUT: <strong className="text-slate-900 font-mono font-bold">{selectedUser.rut || 'No informado'}</strong></span>
+                      <span>Correo: <strong className="text-slate-900 font-medium">{selectedUser.email}</strong></span>
+                      <span>Sucursal: <strong className="text-slate-900">{selectedUser.branchName || 'Sucursal Central'}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -510,7 +704,7 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
                 <button
                   type="button"
                   onClick={() => setSelectedUser(null)}
-                  className="gov-btn-secondary w-full sm:w-auto shrink-0 text-xs py-2"
+                  className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-[#003B70] font-bold text-xs border border-blue-200 hover:border-blue-400 transition-colors shadow-xs shrink-0 self-start sm:self-auto"
                 >
                   Cambiar Funcionario
                 </button>
@@ -761,39 +955,97 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
       ) : (
         /* Historial de Actas */
         <div className="gov-card p-5 space-y-4">
-          <h3 className="text-sm font-bold text-slate-800">Historial de Actas de Entrega & Devolución Emitidas</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">Historial de Actas de Entrega & Devolución Emitidas</h3>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-[#0C1B30] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-[#1E3352]">
+              Servidor Relay Activo: <strong className="text-[#003B70] dark:text-[#38BDF8]">relaycha.cha.cl</strong>
+            </span>
+          </div>
+
+          {emailNotification && (
+            <div className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between gap-3 animate-in fade-in duration-150 ${
+              emailNotification.type === 'success'
+                ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                : 'bg-red-50 dark:bg-red-950/80 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                {emailNotification.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+                )}
+                <span>{emailNotification.message}</span>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setEmailNotification(null)}
+                className="p-1 hover:opacity-75 rounded"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-[#1E3352]">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#003B70] dark:bg-gradient-to-r dark:from-[#002D57] dark:to-[#003B70] text-white">
                 <tr>
-                  <th className="px-3 py-2.5 font-bold">Folio Acta</th>
+                  <th className="px-3 py-2.5 font-bold whitespace-nowrap">Folio Acta</th>
                   <th className="px-3 py-2.5 font-bold">Funcionario Receptor</th>
-                  <th className="px-3 py-2.5 font-bold">RUT</th>
+                  <th className="px-3 py-2.5 font-bold whitespace-nowrap">RUT</th>
                   <th className="px-3 py-2.5 font-bold">Bodega de Salida</th>
-                  <th className="px-3 py-2.5 font-bold">Equipos Asignados</th>
-                  <th className="px-3 py-2.5 font-bold">Estado Firma</th>
-                  <th className="px-3 py-2.5 font-bold">Fecha Emisión</th>
-                  <th className="px-3 py-2.5 text-right font-bold">Descarga PDF</th>
+                  <th className="px-3 py-2.5 font-bold whitespace-nowrap">Equipos Asignados</th>
+                  <th className="px-3 py-2.5 font-bold whitespace-nowrap">Estado Firma</th>
+                  <th className="px-3 py-2.5 font-bold whitespace-nowrap">Fecha Emisión</th>
+                  <th className="px-3 py-2.5 text-right font-bold whitespace-nowrap">Acciones / Correo / PDF</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
                 {assignments.map(act => (
                   <tr key={act.id} className="hover:bg-slate-50 dark:hover:bg-[#162744]">
-                    <td className="px-3 py-2.5 font-mono font-bold text-[#003B70] dark:text-[#38BDF8]">{act.actNumber}</td>
-                    <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white">{act.recipientName}</td>
-                    <td className="px-3 py-2.5 font-mono text-slate-700 dark:text-slate-300">{act.recipientRut}</td>
+                    <td className="px-3 py-2.5 font-mono font-bold text-[#003B70] dark:text-[#38BDF8] whitespace-nowrap">{act.actNumber}</td>
+                    <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white">
+                      <div>{act.recipientName}</div>
+                      {act.recipientEmail && (
+                        <div className="text-[11px] font-normal text-slate-400 font-mono truncate max-w-[180px]">
+                          {act.recipientEmail}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">{act.recipientRut}</td>
                     <td className="px-3 py-2.5 font-semibold text-slate-800 dark:text-slate-200">{act.branchName}</td>
-                    <td className="px-3 py-2.5 font-bold">{act.items.length} ítems</td>
-                    <td className="px-3 py-2.5"><AssignmentStatusBadge status={act.status} /></td>
-                    <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400">{formatDate(act.createdAt)}</td>
-                    <td className="px-3 py-2.5 text-right">
-                      <button
-                        onClick={() => PDFService.downloadActPDF(act)}
-                        className="gov-btn-secondary py-1 px-2.5 text-[#003B70] font-bold"
-                      >
-                        <Download className="w-3.5 h-3.5" /> PDF
-                      </button>
+                    <td className="px-3 py-2.5 font-bold whitespace-nowrap">{act.items.length} ítems</td>
+                    <td className="px-3 py-2.5 whitespace-nowrap"><AssignmentStatusBadge status={act.status} /></td>
+                    <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatDate(act.createdAt)}</td>
+                    <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleResendEmail(act)}
+                          disabled={isResendingEmailId === act.id}
+                          title={`Reenviar copia del acta por correo a ${act.recipientEmail || act.recipientName} vía relaycha.cha.cl`}
+                          className={`inline-flex items-center gap-1 py-1 px-2.5 rounded-lg border text-xs font-bold transition-all ${
+                            isDark 
+                              ? 'bg-[#101C30] hover:bg-[#1A2D4C] text-[#38BDF8] border-[#1E3352]' 
+                              : 'bg-[#EBF3FA] hover:bg-[#D8E8F8] text-[#003B70] border-[#BFDBFE]'
+                          }`}
+                        >
+                          {isResendingEmailId === act.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#003B70] dark:text-[#38BDF8]" />
+                          ) : (
+                            <Mail className="w-3.5 h-3.5" />
+                          )}
+                          <span className="hidden sm:inline">Reenviar Correo</span>
+                        </button>
+
+                        <button
+                          onClick={() => PDFService.downloadActPDF(act)}
+                          className="gov-btn-secondary py-1 px-2.5 text-[#003B70] dark:text-[#38BDF8] font-bold"
+                          title="Descargar archivo PDF oficial"
+                        >
+                          <Download className="w-3.5 h-3.5" /> PDF
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -841,35 +1093,44 @@ export const AssignmentsView: React.FC<AssignmentsViewProps> = ({ currentBranchI
               </ul>
             </div>
 
-            {/* Correo para Envío del Comprobante */}
-            <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 space-y-2">
+            {/* Correo para Envío del Comprobante y Relay */}
+            <div className="p-3.5 rounded-xl bg-blue-50/80 dark:bg-[#0C1B30] border border-blue-200 dark:border-[#1E3B66] space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-[#003B70] flex items-center gap-1.5">
-                  <Mail className="w-4 h-4 text-[#003B70]" />
-                  <span>Correo Electrónico para Envío del Comprobante y Acta Oficial *</span>
+                <label className="text-xs font-bold text-[#003B70] dark:text-[#38BDF8] flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shouldSendEmail}
+                    onChange={(e) => setShouldSendEmail(e.target.checked)}
+                    className="w-4 h-4 rounded text-[#003B70] focus:ring-[#003B70] cursor-pointer"
+                  />
+                  <span>Enviar copia del comprobante digital y acta en PDF por correo</span>
                 </label>
-                <span className="text-[10px] text-blue-700 font-semibold bg-blue-100/80 px-2 py-0.5 rounded border border-blue-200">
-                  Escribir / Modificar
+                <span className="text-[10px] text-blue-700 dark:text-blue-300 font-semibold bg-blue-100/80 dark:bg-blue-950/80 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                  Relay: relaycha.cha.cl
                 </span>
               </div>
 
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                <input
-                  type="email"
-                  value={receiptEmailInput}
-                  onChange={(e) => {
-                    setReceiptEmailInput(e.target.value);
-                    setSignatureModalError(null);
-                  }}
-                  placeholder="Escriba el correo (ej: funcionario@chileatiende.cl o correo personal)..."
-                  className="gov-input pl-9 text-xs sm:text-sm font-semibold"
-                  required
-                />
-              </div>
-              <p className="text-[11px] text-slate-600">
-                Se enviará automáticamente copia del comprobante digital y acta firmada a esta dirección luego de firmar.
-              </p>
+              {shouldSendEmail && (
+                <div className="space-y-1.5 animate-in fade-in duration-150">
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="email"
+                      value={receiptEmailInput}
+                      onChange={(e) => {
+                        setReceiptEmailInput(e.target.value);
+                        setSignatureModalError(null);
+                      }}
+                      placeholder="Escriba el correo institucional (ej: funcionario@chileatiende.cl o ips.gob.cl)..."
+                      className="gov-input gov-input-with-icon text-xs sm:text-sm font-semibold w-full"
+                      required={shouldSendEmail}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    Se enviará automáticamente el correo institucional con el archivo PDF oficial adjunto vía el servidor relay <strong>relaycha.cha.cl</strong>.
+                  </p>
+                </div>
+              )}
             </div>
 
             {signatureModalError && (

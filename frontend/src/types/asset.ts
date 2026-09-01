@@ -120,6 +120,7 @@ export interface TimelineEvent {
   timestamp: string;
   category: 'INGRESO' | 'ENTREGA' | 'DEVOLUCION' | 'MANTENCION' | 'ESTADO';
   actor: string;
+  assignedTo?: string;
   branchName: string;
   documentRef?: string;
   documentType?: 'GUIA_DESPACHO' | 'ACTA_ASIGNACION' | 'ACTA_DEVOLUCION' | 'LOG_KARDEX';
@@ -130,6 +131,7 @@ export interface TimelineEvent {
     physicalCondition?: string;
     actNumber?: string;
     assignmentType?: string;
+    assignedTo?: string;
     recipientName?: string;
     recipientRut?: string;
     recipientJobTitle?: string;

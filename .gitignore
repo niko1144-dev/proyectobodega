@@ -43,3 +43,14 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Certificados SSL y claves privadas
+certs/
+*/certs/
+*.key
+*.crt
+*.pem
+
+# Archivos de datos masivos / planillas locales
+*.xlsx
+*.csv

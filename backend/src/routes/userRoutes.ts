@@ -74,7 +74,7 @@ userRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Crear nuevo usuario (o autorizar funcionario de Active Directory)
+// Crear nuevo usuario (o autorizar/actualizar funcionario en la plataforma con clave personalizada)
 userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const { rut, username, fullName, email, password, role, jobTitle, department, branchId, assignedBranchIds } = req.body;
@@ -87,6 +87,12 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
     const cleanUsername = String(username).trim().toLowerCase();
     const cleanRut = String(rut).trim();
     const cleanEmail = String(email).trim().toLowerCase();
+    const cleanPassword = password ? String(password).trim() : '';
+
+    if (!cleanPassword || cleanPassword.length < 4) {
+      res.status(400).json({ error: 'Debe asignar una contraseña personalizada de al menos 4 caracteres para activar la cuenta.' });
+      return;
+    }
 
     // Normalizar lista de bodegas asignadas
     let branchList: string[] = [];
@@ -98,7 +104,7 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
 
     const primaryBranchId = branchList.length > 0 ? branchList[0] : (branchId || null);
 
-    // Verificar duplicados
+    // Verificar si ya existe el usuario de plataforma
     const existing = await prisma.platformUser.findFirst({
       where: {
         OR: [
@@ -110,7 +116,40 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
     });
 
     if (existing) {
-      res.status(409).json({ error: 'Ya existe un usuario con este RUT, nombre de usuario o correo electrónico.' });
+      const updated = await prisma.platformUser.update({
+        where: { id: existing.id },
+        data: {
+          fullName: String(fullName).trim(),
+          email: cleanEmail,
+          passwordHash: cleanPassword,
+          role: role as PlatformRole,
+          jobTitle: jobTitle || existing.jobTitle,
+          department: department || existing.department,
+          branchId: primaryBranchId,
+          assignedBranchIds: branchList,
+          isActive: true
+        },
+        include: { branch: true }
+      });
+
+      res.json({
+        success: true,
+        message: `Acceso y contraseña personalizada actualizados exitosamente para ${updated.fullName}`,
+        user: {
+          id: updated.id,
+          rut: updated.rut,
+          username: updated.username,
+          fullName: updated.fullName,
+          email: updated.email,
+          role: updated.role,
+          jobTitle: updated.jobTitle,
+          branchId: updated.branchId,
+          branchName: updated.branch?.name || 'Sucursal Central',
+          assignedBranchIds: updated.assignedBranchIds,
+          isActive: updated.isActive,
+          createdAt: updated.createdAt.toISOString()
+        }
+      });
       return;
     }
 
@@ -120,7 +159,7 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
         username: cleanUsername,
         fullName: String(fullName).trim(),
         email: cleanEmail,
-        passwordHash: password && String(password).trim().length > 0 ? String(password).trim() : 'AD_AUTHENTICATED',
+        passwordHash: cleanPassword,
         role: role as PlatformRole,
         jobTitle: jobTitle || 'Funcionario ITAM',
         department: department || 'División Tecnologías de la Información',
@@ -133,7 +172,7 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json({
       success: true,
-      message: `Usuario ${newUser.fullName} creado exitosamente`,
+      message: `Cuenta de ${newUser.fullName} activada exitosamente con su contraseña personalizada`,
       user: {
         id: newUser.id,
         rut: newUser.rut,
@@ -150,7 +189,7 @@ userRouter.post('/', async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error: any) {
-    res.status(500).json({ error: 'Error al crear usuario', details: error.message });
+    res.status(500).json({ error: 'Error al crear/activar usuario', details: error.message });
   }
 });
 

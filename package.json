@@ -9,6 +9,8 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:setup": "cd backend && npx prisma generate && npx prisma db push && npx prisma db seed",
+    "sync:ldap": "cd backend && npm run sync:ldap",
+    "start": "cd backend && npm run start",
     "build": "cd backend && npm run build && cd ../frontend && npm run build",
     "install:all": "cd backend && npm install && cd ../frontend && npm install"
   }

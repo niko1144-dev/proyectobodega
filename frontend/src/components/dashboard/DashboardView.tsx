@@ -33,6 +33,7 @@ import { StatusBadge } from '../common/Badge';
 import { formatDate, getDaysUntil } from '../../utils/formatters';
 import { ExcelService } from '../../services/excelService';
 import { ApiClient } from '../../api/client';
+import { TopDeliveredCard } from './TopDeliveredCard';
 
 interface DashboardViewProps {
   currentBranchId: string;
@@ -98,14 +99,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
     return acc;
   }, {} as Record<string, number>);
 
-  // Contratos Próximos a Vencer (<60 días)
+  // Contratos Próximos a Vencer (según umbral de días configurado en cada contrato)
   const expiringContracts = contracts
     .map(c => {
       const days = getDaysUntil(c.endDate) ?? 999;
       const linkedAssets = assets.filter(a => a.leasingContractId === c.id).length;
       return { ...c, daysLeft: days, linkedAssetsCount: linkedAssets };
     })
-    .filter(c => c.daysLeft >= 0 && c.daysLeft <= 60)
+    .filter(c => c.daysLeft >= 0 && c.daysLeft <= (c.warningDaysThreshold || 30))
     .sort((a, b) => (a.daysLeft ?? 0) - (b.daysLeft ?? 0));
 
   // Insumos con Stock Crítico
@@ -442,7 +443,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ currentBranchId, o
 
       </div>
 
-      {/* 4. SECCIÓN CENTRAL: DISTRIBUCIÓN DE HARDWARE & ALERTAS */}
+      {/* 4. SECCIÓN DESTACADA: TOP 5 PRODUCTOS MÁS ENTREGADOS (DINÁMICO & EXPORTABLE) */}
+      <TopDeliveredCard 
+        currentBranchId={currentBranchId}
+        currentBranchName={currentBranchName}
+        onNavigate={onNavigate}
+      />
+
+      {/* 5. SECCIÓN CENTRAL: DISTRIBUCIÓN DE HARDWARE & ALERTAS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Distribución por Tipo de Hardware */}

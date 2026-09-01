@@ -315,6 +315,7 @@ model UserADCache {
   email          String
   jobTitle       String?
   department     String?
+  domain         String?  @default("cha.cl")
   branchId       String?
   role           String   @default("FUNCIONARIO")
   isActive       Boolean  @default(true)
@@ -326,6 +327,7 @@ model UserADCache {
   handledAssignments  Assignment[] @relation("TechnicianUser")
 
   @@index([rut, samAccountName, email])
+  @@index([domain])
   @@map("users_ad_cache")
 }
 
@@ -409,6 +411,8 @@ model PlatformUser {
   branch           Branch?      @relation(fields: [branchId], references: [id])
   assignedBranchIds String[]    @default([])
   isActive         Boolean      @default(true)
+  resetToken       String?
+  resetTokenExpires DateTime?
   lastLoginAt      DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
@@ -418,3 +422,15 @@ model PlatformUser {
   @@index([branchId])
 }
 
+model ItemReservation {
+  id              String   @id @default(uuid())
+  itemType        String   // "ASSET" o "CONSUMABLE"
+  itemId          String   // assetId o consumableId
+  quantity        Int      @default(1)
+  reservedByUserId String
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+
+  @@unique([itemType, itemId])
+  @@map("item_reservations")
+}

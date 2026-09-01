@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, NavModule } from './components/layout/Sidebar';
 import { LoginView } from './components/auth/LoginView';
+import { ResetPasswordView } from './components/auth/ResetPasswordView';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { ReceptionView } from './components/reception/ReceptionView';
 import { InventoryView } from './components/inventory/InventoryView';
@@ -13,6 +14,7 @@ import { ReturnsView } from './components/returns/ReturnsView';
 import { DirectoryView } from './components/directory/DirectoryView';
 import { UsersManagementView } from './components/users/UsersManagementView';
 import { SettingsView } from './components/settings/SettingsView';
+import { ApiClient } from './api/client';
 import { storage } from './db/storage';
 import { PlatformUser } from './types/user';
 import { getDaysUntil } from './utils/formatters';
@@ -20,6 +22,37 @@ import { useTheme } from './context/ThemeContext';
 
 export const App: React.FC = () => {
   const { isDark } = useTheme();
+
+  // Detección de token de recuperación de contraseña en URL (?token=... o #token=...)
+  const [resetToken, setResetToken] = useState<string | null>(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const queryToken = searchParams.get('token') || searchParams.get('resetToken');
+      if (queryToken) return queryToken;
+
+      const hash = window.location.hash;
+      if (hash && hash.includes('token=')) {
+        const hashParams = new URLSearchParams(hash.replace(/^#\/?/, ''));
+        return hashParams.get('token') || hashParams.get('resetToken');
+      }
+    } catch {
+      // Ignorar errores de parsing
+    }
+    return null;
+  });
+
+  const [openForgotModalOnLogin, setOpenForgotModalOnLogin] = useState<boolean>(false);
+
+  const clearTokenFromUrl = () => {
+    setResetToken(null);
+    try {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    } catch {
+      // Ignorar
+    }
+  };
+
   // Estado de Autenticación
   const [currentUser, setCurrentUser] = useState<PlatformUser | null>(() => {
     return storage.getCurrentUser();
@@ -30,34 +63,54 @@ export const App: React.FC = () => {
   const [globalSearchTerm, setGlobalSearchTerm] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
-  // Indicadores para el Sidebar
+  // Indicadores en tiempo real para el Sidebar (Alertas de vencimiento y stock crítico)
   const [pendingExpirationsCount, setPendingExpirationsCount] = useState<number>(0);
   const [criticalStockCount, setCriticalStockCount] = useState<number>(0);
 
-  const updateAlerts = () => {
-    // 1. Contratos por vencer (< 60 días)
-    const contracts = storage.getLeasingContracts();
-    const expCount = contracts.filter(c => {
-      const days = getDaysUntil(c.endDate);
-      return days !== null && days <= 60;
-    }).length;
-    setPendingExpirationsCount(expCount);
+  const updateAlerts = async (branchId?: string) => {
+    try {
+      const activeBranch = branchId !== undefined ? branchId : currentBranchId;
+      const metrics = await ApiClient.getDashboardMetrics(activeBranch);
+      setPendingExpirationsCount(Array.isArray(metrics?.expiringContracts) ? metrics.expiringContracts.length : 0);
+      setCriticalStockCount(Array.isArray(metrics?.criticalStocks) ? metrics.criticalStocks.length : 0);
+    } catch {
+      setPendingExpirationsCount(0);
+      setCriticalStockCount(0);
+    }
+  };
 
-    // 2. Insumos bajo stock
-    const stocks = storage.getConsumableStocks();
-    const consumables = storage.getConsumables();
-    const critCount = stocks.filter(stk => {
-      const c = consumables.find(item => item.id === stk.consumableId);
-      return c && stk.currentQuantity <= c.minStockAlert;
-    }).length;
-    setCriticalStockCount(critCount);
+  // Sincronizar datos frescos del usuario autenticado (Nombre, Cargo, Rol) solo si hay sesión activa
+  const syncCurrentUser = async () => {
+    const localUser = storage.getCurrentUser();
+    if (!localUser) {
+      setCurrentUser(null);
+      return;
+    }
+    try {
+      const pUsers = await ApiClient.getPlatformUsers();
+      const freshUser = pUsers.find(u => u.id === localUser.id || u.username.toLowerCase() === localUser.username.toLowerCase());
+      if (freshUser) {
+        storage.setCurrentUser(freshUser);
+        setCurrentUser(freshUser);
+      } else {
+        setCurrentUser(localUser);
+      }
+    } catch {
+      setCurrentUser(localUser);
+    }
   };
 
   useEffect(() => {
-    updateAlerts();
-    window.addEventListener('itam_storage_updated', updateAlerts);
-    return () => window.removeEventListener('itam_storage_updated', updateAlerts);
-  }, []);
+    updateAlerts(currentBranchId);
+    syncCurrentUser();
+    const handleStorageUpdate = () => {
+      updateAlerts(currentBranchId);
+      const u = storage.getCurrentUser();
+      setCurrentUser(u);
+    };
+    window.addEventListener('itam_storage_updated', handleStorageUpdate);
+    return () => window.removeEventListener('itam_storage_updated', handleStorageUpdate);
+  }, [currentBranchId]);
 
   const handleGlobalSearch = (term: string) => {
     setGlobalSearchTerm(term);
@@ -70,21 +123,42 @@ export const App: React.FC = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('¿Confirma que desea cerrar su sesión en la plataforma?')) {
+      await ApiClient.logout();
+      storage.logout();
       setCurrentUser(null);
-      localStorage.removeItem('chileatiende_itam_current_user_v1');
     }
   };
 
-  // Si no hay sesión iniciada, mostrar Login
+  // 1. Si hay un token de recuperación en la URL, mostrar el portal de cambio de clave
+  if (resetToken) {
+    return (
+      <ResetPasswordView
+        token={resetToken}
+        onSuccess={() => {
+          clearTokenFromUrl();
+          setOpenForgotModalOnLogin(false);
+        }}
+        onGoToLogin={(openForgotModal) => {
+          clearTokenFromUrl();
+          setOpenForgotModalOnLogin(!!openForgotModal);
+        }}
+      />
+    );
+  }
+
+  // 2. Si no hay sesión iniciada, mostrar Login
   if (!currentUser) {
     return (
       <LoginView
+        initialOpenForgotModal={openForgotModalOnLogin}
         onLoginSuccess={(user) => {
+          storage.setCurrentUser(user);
           setCurrentUser(user);
           setActiveModule('dashboard');
           setIsMobileMenuOpen(false);
+          setOpenForgotModalOnLogin(false);
         }}
       />
     );

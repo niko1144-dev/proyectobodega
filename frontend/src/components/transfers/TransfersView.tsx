@@ -570,13 +570,13 @@ export const TransfersView: React.FC = () => {
 
               {/* Barra de Búsqueda de Activos */}
               <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={assetSearchQuery}
                   onChange={(e) => setAssetSearchQuery(e.target.value)}
                   placeholder="Buscar por N° de Serie, Inventario, Marca, Modelo o Tipo..."
-                  className="gov-input pl-9 text-xs"
+                  className="gov-input gov-input-with-icon text-xs"
                 />
               </div>
 
@@ -596,10 +596,10 @@ export const TransfersView: React.FC = () => {
                           className="rounded text-[#003B70] focus:ring-0"
                         />
                       </th>
-                      <th className="px-3.5 py-2.5 font-bold">N° de Serie / Inventario</th>
+                      <th className="px-3.5 py-2.5 font-bold whitespace-nowrap">N° de Serie / Inventario</th>
                       <th className="px-3.5 py-2.5 font-bold">Equipo & Modelo</th>
-                      <th className="px-3.5 py-2.5 font-bold">Tipo & Categoría</th>
-                      <th className="px-3.5 py-2.5 font-bold">Estado Actual</th>
+                      <th className="px-3.5 py-2.5 font-bold whitespace-nowrap">Tipo & Categoría</th>
+                      <th className="px-3.5 py-2.5 font-bold whitespace-nowrap">Estado Actual</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
@@ -628,7 +628,7 @@ export const TransfersView: React.FC = () => {
                                 className="rounded text-[#003B70] focus:ring-0"
                               />
                             </td>
-                            <td className="px-3.5 py-2.5">
+                            <td className="px-3.5 py-2.5 whitespace-nowrap">
                               <div className="font-mono font-bold text-[#003B70]">{a.serialNumber}</div>
                               {a.inventoryNumber && (
                                 <div className="text-[10px] text-slate-500 font-mono">Inv: {a.inventoryNumber}</div>
@@ -637,12 +637,12 @@ export const TransfersView: React.FC = () => {
                             <td className="px-3.5 py-2.5">
                               <div className="font-bold text-slate-900">{a.brand} {a.model}</div>
                             </td>
-                            <td className="px-3.5 py-2.5">
+                            <td className="px-3.5 py-2.5 whitespace-nowrap">
                               <div className="font-semibold text-slate-700">{a.assetType?.name}</div>
                               <div className="text-[10px] text-slate-400">{a.assetType?.category}</div>
                             </td>
-                            <td className="px-3.5 py-2.5">
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
+                            <td className="px-3.5 py-2.5 whitespace-nowrap">
+                              <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
                                 {a.status.replace(/_/g, ' ')}
                               </span>
                             </td>

@@ -76,17 +76,39 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.STOCK_MOVEMENTS, JSON.stringify(initialStockMovements));
     localStorage.setItem(STORAGE_KEYS.ASSIGNMENTS, JSON.stringify(initialAssignments));
     localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(initialAuditLogs));
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(initialADUsers[0]));
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     window.dispatchEvent(new Event('itam_storage_updated'));
   }
 
   // --- SESIÓN ACTUAL ---
-  public getCurrentUser(): PlatformUser {
-    return this.getItem<PlatformUser>(STORAGE_KEYS.CURRENT_USER, initialPlatformUsers[0]);
+  public getCurrentUser(): PlatformUser | null {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      if (!data) return null;
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
   }
 
-  public setCurrentUser(user: PlatformUser): void {
-    this.setItem(STORAGE_KEYS.CURRENT_USER, user);
+  public setCurrentUser(user: PlatformUser | null): void {
+    if (!user) {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      window.dispatchEvent(new Event('itam_storage_updated'));
+      return;
+    }
+    try {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+      window.dispatchEvent(new Event('itam_storage_updated'));
+    } catch (e) {
+      console.error('Error guardando usuario en localStorage', e);
+    }
+  }
+
+  public logout(): void {
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem('itam_token');
+    window.dispatchEvent(new Event('itam_storage_updated'));
   }
 
   // --- MAESTROS ---
@@ -168,7 +190,7 @@ class StorageService {
   public addAssetsBatch(newAssets: Asset[], auditReason: string, docRef?: string): void {
     const assets = this.getAssets();
     const logs = this.getAuditLogs();
-    const currentUser = this.getCurrentUser();
+    const currentUser = this.getCurrentUser() || initialPlatformUsers[0];
     const now = new Date().toISOString();
 
     const createdLogs: AssetAuditLog[] = newAssets.map(a => ({
@@ -198,7 +220,7 @@ class StorageService {
   ): void {
     const assets = this.getAssets();
     const branches = this.getBranches();
-    const currentUser = this.getCurrentUser();
+    const currentUser = this.getCurrentUser() || initialPlatformUsers[0];
     const now = new Date().toISOString();
 
     const assetIndex = assets.findIndex(a => a.id === assetId);
@@ -303,7 +325,7 @@ class StorageService {
     const branches = this.getBranches();
     const stocks = this.getConsumableStocks();
     const movements = this.getStockMovements();
-    const currentUser = this.getCurrentUser();
+    const currentUser = this.getCurrentUser() || initialPlatformUsers[0];
     const now = new Date().toISOString();
 
     const consumable = consumables.find(c => c.id === consumableId);
@@ -313,7 +335,7 @@ class StorageService {
     let stockItem = stocks.find(s => s.consumableId === consumableId && s.branchId === branchId);
     if (!stockItem) {
       stockItem = {
-        id: `stk-${Date.now()}`,
+        id: `stk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         consumableId,
         branchId,
         branchName: branch.name,
@@ -383,7 +405,7 @@ class StorageService {
     const assets = this.getAssets();
     const logs = this.getAuditLogs();
     const now = new Date().toISOString();
-    const currentUser = this.getCurrentUser();
+    const currentUser = this.getCurrentUser() || initialPlatformUsers[0];
 
     assignment.status = signatureDataUrl ? 'FIRMADO_DIGITAL' : 'PENDIENTE_FIRMA';
     assignment.signatureDataUrl = signatureDataUrl;
@@ -429,7 +451,7 @@ class StorageService {
           assignment.branchId,
           'ENTREGA_FUNCIONARIO',
           item.quantity,
-          `Entrega en Acta ${assignment.actNumber}`,
+          `Entrega a funcionario mediante Acta ${assignment.actNumber}`,
           {
             assignmentActNumber: assignment.actNumber,
             recipientUserName: assignment.recipientName
@@ -438,9 +460,10 @@ class StorageService {
       }
     });
 
+    const updatedAssignments = [assignment, ...assignments];
+    this.setItem(STORAGE_KEYS.ASSIGNMENTS, updatedAssignments);
     this.setItem(STORAGE_KEYS.ASSETS, assets);
     this.setItem(STORAGE_KEYS.AUDIT_LOGS, [...newLogs, ...logs]);
-    this.setItem(STORAGE_KEYS.ASSIGNMENTS, [assignment, ...assignments]);
 
     return assignment;
   }
@@ -459,67 +482,67 @@ class StorageService {
   }
 
   public processReturn(
-    assignmentId: string,
-    returnedItemIds: { itemId: string; condition: PhysicalCondition; notes: string; destinationStatus: AssetStatus }[],
-    returnBranchId?: string
+    assignmentId: string, 
+    returnedItems: { itemId: string; physicalCondition: PhysicalCondition; notes?: string; destinationStatus: AssetStatus }[],
+    destinationBranchId?: string
   ): void {
     const assignments = this.getAssignments();
     const assets = this.getAssets();
-    const branches = this.getBranches();
     const logs = this.getAuditLogs();
-    const currentUser = this.getCurrentUser();
+    const branches = this.getBranches();
+    const currentUser = this.getCurrentUser() || initialPlatformUsers[0];
     const now = new Date().toISOString();
 
     const assignment = assignments.find(a => a.id === assignmentId);
     if (!assignment) return;
 
-    let targetBranch = branches.find(b => b.id === returnBranchId) || 
-                       branches.find(b => b.id === assignment.branchId) || 
-                       branches[0];
-
+    const targetBranch = destinationBranchId ? branches.find(b => b.id === destinationBranchId) : undefined;
     const newLogs: AssetAuditLog[] = [];
 
-    returnedItemIds.forEach(ret => {
+    returnedItems.forEach(ret => {
       const item = assignment.items.find(i => i.id === ret.itemId);
-      if (!item) return;
+      if (item) {
+        item.isReturned = true;
+        item.returnedAt = now;
+        item.conditionAtReturn = ret.physicalCondition;
+        item.returnNotes = ret.notes;
 
-      item.isReturned = true;
-      item.returnedAt = now;
-      item.conditionAtReturn = ret.condition;
-      item.returnNotes = ret.notes;
+        // Actualizar estado del activo
+        if (item.assetId) {
+          const asset = assets.find(a => a.id === item.assetId);
+          if (asset) {
+            const prevStatus = asset.status;
+            const prevUser = asset.assignedToUserName;
 
-      if (item.assetId) {
-        const asset = assets.find(a => a.id === item.assetId);
-        if (asset) {
-          const prevStatus = asset.status;
-          const prevUser = asset.assignedToUserName;
-          asset.status = ret.destinationStatus;
-          asset.physicalCondition = ret.condition;
-          if (targetBranch) {
-            asset.currentBranchId = targetBranch.id;
-            asset.currentBranchName = targetBranch.name;
+            asset.status = ret.destinationStatus;
+            asset.physicalCondition = ret.physicalCondition;
+            asset.assignedToUserId = undefined;
+            asset.assignedToUserName = undefined;
+            asset.assignedToUserRut = undefined;
+            asset.assignedToUserDept = undefined;
+            asset.assignedDate = undefined;
+            asset.updatedAt = now;
+
+            if (targetBranch) {
+              asset.currentBranchId = targetBranch.id;
+              asset.currentBranchName = targetBranch.name;
+            }
+
+            newLogs.push({
+              id: `aud-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              assetId: asset.id,
+              serialNumber: asset.serialNumber,
+              inventoryNumber: asset.inventoryNumber,
+              timestamp: now,
+              previousStatus: prevStatus,
+              newStatus: ret.destinationStatus,
+              previousUserName: prevUser,
+              branchName: targetBranch ? targetBranch.name : assignment.branchName,
+              changedByUserName: currentUser.fullName,
+              changeReason: `Devolución de equipo (Acta ${assignment.actNumber}) a bodega ${targetBranch ? targetBranch.name : assignment.branchName}: ${ret.notes || 'Reingreso conforme'}`,
+              documentRef: assignment.actNumber
+            });
           }
-          asset.assignedToUserId = undefined;
-          asset.assignedToUserName = undefined;
-          asset.assignedToUserRut = undefined;
-          asset.assignedToUserDept = undefined;
-          asset.assignedDate = undefined;
-          asset.updatedAt = now;
-
-          newLogs.push({
-            id: `aud-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            assetId: asset.id,
-            serialNumber: asset.serialNumber,
-            inventoryNumber: asset.inventoryNumber,
-            timestamp: now,
-            previousStatus: prevStatus,
-            newStatus: ret.destinationStatus,
-            previousUserName: prevUser,
-            branchName: targetBranch ? targetBranch.name : assignment.branchName,
-            changedByUserName: currentUser.fullName,
-            changeReason: `Devolución de equipo (Acta ${assignment.actNumber}) a bodega ${targetBranch ? targetBranch.name : assignment.branchName}: ${ret.notes || 'Reingreso conforme'}`,
-            documentRef: assignment.actNumber
-          });
         }
       }
     });

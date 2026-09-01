@@ -7,9 +7,13 @@ export const assetRouter = Router();
 // Listar activos con filtros
 assetRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { propertyType, status, branchId, assetTypeId, search } = req.query;
+    const { propertyType, status, branchId, assetTypeId, search, assignedToUserId } = req.query;
 
     const where: any = {};
+
+    if (assignedToUserId) {
+      where.assignedToUserId = String(assignedToUserId);
+    }
 
     if (propertyType && propertyType !== 'ALL') {
       where.propertyType = propertyType as AssetPropertyType;
@@ -204,6 +208,7 @@ assetRouter.get('/:identifier/traceability', async (req: Request, res: Response)
     // 2. Eventos de Asignación y Devolución
     for (const item of asset.assignmentItems) {
       const asg = item.assignment;
+      const assignedPersonName = asg.recipientUser?.fullName || 'Funcionario';
       
       timeline.push({
         id: `evt-asg-${item.id}`,
@@ -212,13 +217,15 @@ assetRouter.get('/:identifier/traceability', async (req: Request, res: Response)
         timestamp: asg.createdAt,
         category: 'ENTREGA',
         actor: asg.technicianUser?.fullName || 'Técnico Responsable',
+        assignedTo: assignedPersonName,
         branchName: asg.branch?.name || asset.currentBranch.name,
         documentRef: `Acta Folio ${asg.actNumber}`,
         documentType: 'ACTA_ASIGNACION',
         details: {
           actNumber: asg.actNumber,
           assignmentType: asg.assignmentType,
-          recipientName: asg.recipientUser?.fullName || 'Funcionario',
+          assignedTo: assignedPersonName,
+          recipientName: assignedPersonName,
           recipientRut: asg.recipientUser?.rut || '',
           recipientJobTitle: asg.recipientUser?.jobTitle || 'Funcionario',
           recipientDepartment: asg.recipientUser?.department || 'ChileAtiende',
@@ -237,6 +244,7 @@ assetRouter.get('/:identifier/traceability', async (req: Request, res: Response)
           timestamp: item.returnedAt,
           category: 'DEVOLUCION',
           actor: asg.technicianUser?.fullName || 'Técnico Responsable',
+          assignedTo: undefined,
           branchName: asg.branch?.name || asset.currentBranch.name,
           documentRef: `Acta Folio ${asg.actNumber}`,
           documentType: 'ACTA_DEVOLUCION',
@@ -253,13 +261,32 @@ assetRouter.get('/:identifier/traceability', async (req: Request, res: Response)
     for (const log of asset.auditLogs) {
       // Evitar duplicar el evento inicial si ya está en la recepción
       if (!log.changeReason.includes('Ingreso inicial')) {
+        let assignedToName = log.newUserName || undefined;
+        let cleanReason = log.changeReason;
+
+        // Si newUserName no está explícito pero el motivo contiene el nombre del funcionario
+        if (!assignedToName) {
+          const match = log.changeReason.match(/(?:funcionario|asignad[oa]\s+a:?|entrega\s+a:?)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s\.]+?)(?:\s*\(Acta|\s*mediante|\.|$)/i);
+          if (match && match[1] && !match[1].toLowerCase().includes('mediante') && !match[1].toLowerCase().includes('bodega')) {
+            assignedToName = match[1].trim();
+          }
+        }
+
+        // Limpiar el comentario para no redundar el nombre dentro del texto
+        if (assignedToName) {
+          const cleanPattern = new RegExp(`(?:Asignaci[oó]n(?:\\s+de\\s+puesto\\s+de\\s+trabajo)?\\s+a\\s+funcionario|Asignad[oa]\\s+a:?|Entrega\\s+a:?)\\s+${assignedToName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi');
+          cleanReason = cleanReason.replace(cleanPattern, '').replace(/^\s*[\-\:\.\,\|\•]\s*/, '').replace(/\s*[\-\:\.\,\|\•]\s*$/, '').trim();
+        }
+
+        const isAssignment = log.newStatus === 'ASIGNADO' || !!assignedToName || log.changeReason.toLowerCase().includes('asignaci');
         timeline.push({
           id: `evt-audit-${log.id}`,
           type: 'AUDITORIA_KARDEX',
-          title: log.newStatus === 'EN_MANTENCION' ? 'Servicio Técnico / Envío a Taller' : (log.changeReason.includes('Devolución') ? 'Reingreso Físico a Bodega' : 'Cambio de Estado o Custodia'),
+          title: log.newStatus === 'EN_MANTENCION' ? 'Servicio Técnico / Envío a Taller' : (log.changeReason.includes('Devolución') ? 'Reingreso Físico a Bodega' : (isAssignment ? 'Asignación y Entrega a Funcionario' : 'Cambio de Estado o Custodia')),
           timestamp: log.timestamp,
-          category: log.newStatus === 'EN_MANTENCION' ? 'MANTENCION' : 'ESTADO',
+          category: log.newStatus === 'EN_MANTENCION' ? 'MANTENCION' : (isAssignment ? 'ENTREGA' : 'ESTADO'),
           actor: log.changedByUserName,
+          assignedTo: assignedToName,
           branchName: log.branchName,
           documentRef: log.documentRef || undefined,
           documentType: 'LOG_KARDEX',
@@ -267,8 +294,10 @@ assetRouter.get('/:identifier/traceability', async (req: Request, res: Response)
             previousStatus: log.previousStatus,
             newStatus: log.newStatus,
             previousUserName: log.previousUserName,
-            newUserName: log.newUserName,
-            changeReason: log.changeReason
+            newUserName: assignedToName,
+            assignedTo: assignedToName,
+            recipientName: assignedToName,
+            changeReason: cleanReason || undefined
           }
         });
       }
@@ -413,3 +442,96 @@ assetRouter.patch('/:id/status', async (req: Request, res: Response): Promise<vo
     res.status(500).json({ error: 'Error actualizando estado del activo', details: error.message });
   }
 });
+
+// Actualizar información técnica o ID de inventario del activo (Edición posterior)
+assetRouter.put('/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const {
+      inventoryNumber,
+      brand,
+      model,
+      assetTypeId,
+      locationDetail,
+      physicalCondition,
+      specifications,
+      notes,
+      changedByUserName
+    } = req.body;
+
+    const currentAsset = await prisma.asset.findUnique({
+      where: { id },
+      include: { currentBranch: true }
+    });
+
+    if (!currentAsset) {
+      res.status(404).json({ error: 'Activo no encontrado' });
+      return;
+    }
+
+    const cleanInv = inventoryNumber ? String(inventoryNumber).trim().toUpperCase() : null;
+
+    // Si se especificó un N° de inventario, validar que no esté duplicado en otro activo
+    if (cleanInv) {
+      const existing = await prisma.asset.findFirst({
+        where: {
+          inventoryNumber: { equals: cleanInv, mode: 'insensitive' },
+          NOT: { id }
+        }
+      });
+      if (existing) {
+        res.status(400).json({
+          error: `El N° de Inventario '${cleanInv}' ya está registrado en otro activo (${existing.brand} ${existing.model} - S/N: ${existing.serialNumber}).`
+        });
+        return;
+      }
+    }
+
+    const oldInv = currentAsset.inventoryNumber;
+    const invChanged = oldInv !== cleanInv;
+
+    const [updatedAsset, log] = await prisma.$transaction([
+      prisma.asset.update({
+        where: { id },
+        data: {
+          inventoryNumber: cleanInv,
+          brand: brand !== undefined ? String(brand).trim() : currentAsset.brand,
+          model: model !== undefined ? String(model).trim() : currentAsset.model,
+          assetTypeId: assetTypeId || currentAsset.assetTypeId,
+          locationDetail: locationDetail !== undefined ? String(locationDetail).trim() : currentAsset.locationDetail,
+          physicalCondition: physicalCondition || currentAsset.physicalCondition,
+          specifications: specifications !== undefined ? specifications : currentAsset.specifications,
+          notes: notes !== undefined ? String(notes).trim() : currentAsset.notes,
+        },
+        include: {
+          assetType: true,
+          currentBranch: true,
+          dispatchGuide: true,
+          purchaseOrder: true,
+          leasingContract: { include: { supplier: true } },
+        }
+      }),
+      prisma.assetAuditLog.create({
+        data: {
+          assetId: currentAsset.id,
+          serialNumber: currentAsset.serialNumber,
+          inventoryNumber: cleanInv || currentAsset.inventoryNumber,
+          previousStatus: currentAsset.status,
+          newStatus: currentAsset.status,
+          previousUserId: currentAsset.assignedToUserId,
+          previousUserName: currentAsset.assignedToUserName,
+          branchName: currentAsset.currentBranch?.name || 'Sucursal Central',
+          changedByUserName: changedByUserName || 'Técnico Administrador',
+          changeReason: invChanged
+            ? `Edición de activo: N° Inventario actualizado de '${oldInv || '(Sin N°)'}' a '${cleanInv || '(Sin N°)'}'`
+            : `Edición de activo: Actualización de datos técnicos / ubicación`
+        }
+      })
+    ]);
+
+    res.json({ success: true, asset: updatedAsset, auditLog: log });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Error actualizando información del activo', details: error.message });
+  }
+});
+

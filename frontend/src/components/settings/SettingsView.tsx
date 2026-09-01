@@ -430,17 +430,17 @@ export const SettingsView: React.FC = () => {
   const getCategoryBadge = (cat: string) => {
     switch (cat) {
       case 'COMPUTO':
-        return <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">CÓMPUTO</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">CÓMPUTO</span>;
       case 'PANTALLAS':
-        return <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">PANTALLAS / MONITORES</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">PANTALLAS / MONITORES</span>;
       case 'REDES':
-        return <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-bold border border-amber-200">REDES & TELECOM</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-bold border border-amber-200">REDES & TELECOM</span>;
       case 'IMPRESION':
-        return <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">IMPRESIÓN & SCANNER</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">IMPRESIÓN & SCANNER</span>;
       case 'PERIFERICOS_BIOMETRIA':
-        return <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-800 font-bold border border-purple-200">BIOMETRÍA & ACCESO</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-purple-50 text-purple-800 font-bold border border-purple-200">BIOMETRÍA & ACCESO</span>;
       default:
-        return <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">{cat}</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-slate-100 text-slate-700">{cat}</span>;
     }
   };
 
@@ -689,7 +689,7 @@ export const SettingsView: React.FC = () => {
                     <td className="px-3 py-2.5 text-slate-500">{s.contactEmail || '-'}</td>
                     <td className="px-3 py-2.5 text-slate-500">{s.contactPhone || '-'}</td>
                     <td className="px-3 py-2.5">
-                      <span className="px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0]">
+                      <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0]">
                         Habilitado
                       </span>
                     </td>
@@ -734,7 +734,7 @@ export const SettingsView: React.FC = () => {
                         {po.totalAmountCLP ? formatCurrencyCLP(po.totalAmountCLP) : '-'}
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">
+                        <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">
                           {(po as any).status || 'VIGENTE'}
                         </span>
                       </td>
@@ -782,7 +782,7 @@ export const SettingsView: React.FC = () => {
                         {c.warningDaysThreshold} días antes
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
+                        <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
                           {(c as any).status || (c.isActive ? 'ACTIVO' : 'VENCIDO')}
                         </span>
                       </td>
@@ -828,7 +828,7 @@ export const SettingsView: React.FC = () => {
                 {branches.map(b => (
                   <tr key={b.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-3.5 py-3 font-mono font-bold text-[#003B70]">
-                      <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-200">
+                      <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 rounded bg-blue-50 border border-blue-200">
                         {b.code}
                       </span>
                     </td>
@@ -851,11 +851,11 @@ export const SettingsView: React.FC = () => {
                     </td>
                     <td className="px-3.5 py-3 text-center">
                       {b.isActive !== false ? (
-                        <span className="px-2.5 py-1 rounded-full bg-[#ECFDF5] text-[#065F46] font-bold text-[10px] border border-[#A7F3D0]">
+                        <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full bg-[#ECFDF5] text-[#065F46] font-bold text-[10px] border border-[#A7F3D0]">
                           ✓ OPERATIVA
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px] border border-slate-300">
+                        <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px] border border-slate-300">
                           INACTIVA
                         </span>
                       )}

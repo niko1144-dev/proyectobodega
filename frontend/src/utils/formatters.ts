@@ -199,3 +199,62 @@ export function validateEmail(email: string): boolean {
   const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   return re.test(String(email).toLowerCase().trim());
 }
+
+// --- EXTRACCIÓN Y LIMPIEZA DE ASIGNADO / MOTIVOS ---
+
+export interface ParsedAssignmentReason {
+  assignedPerson?: string;
+  cleanReason: string;
+}
+
+export function extractAssignedPersonAndCleanReason(
+  rawReason?: string | null,
+  existingAssignedPerson?: string | null
+): ParsedAssignmentReason {
+  let assignedPerson = existingAssignedPerson?.trim() || undefined;
+  let cleanReason = (rawReason || '').trim();
+
+  // Si no hay asignado explícito, intentar extraerlo del comentario
+  if (!assignedPerson && cleanReason) {
+    const patterns = [
+      /(?:Asignaci[oó]n(?:\\s+de\\s+puesto\\s+de\\s+trabajo)?\\s+a\\s+funcionario|Asignaci[oó]n\\s+a\\s+funcionario|Entrega\\s+a\\s+funcionario)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s\.]+?)(?:\s*\(Acta|\s*mediante\s+Acta|\.|$)/i,
+      /(?:Asignad[oa]\s+a|Entrega\s+a)\s*:\s*([A-ZÁÉÍÓÚÑa-záéíóúñ\s\.]+?)(?:\s*\(Acta|\s*mediante\s+Acta|\.|$)/i,
+      /(?:Asignad[oa]\s+a)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s\.]+?)(?:\s*\(Acta|\s*mediante\s+Acta|\.|$)/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = cleanReason.match(pattern);
+      if (match && match[1] && match[1].trim() && !match[1].toLowerCase().includes('mediante') && !match[1].toLowerCase().includes('bodega')) {
+        assignedPerson = match[1].trim();
+        break;
+      }
+    }
+  }
+
+  // Limpiar el texto del comentario para no redundar el nombre dentro del comentario
+  if (assignedPerson && cleanReason) {
+    const escapedPerson = assignedPerson.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const cleanPatterns = [
+      new RegExp(`(?:Asignaci[oó]n(?:\\s+de\\s+puesto\\s+de\\s+trabajo)?\\s+a\\s+funcionario|Asignaci[oó]n\\s+a\\s+funcionario|Entrega\\s+a\\s+funcionario)\\s+${escapedPerson}`, 'gi'),
+      new RegExp(`(?:Asignad[oa]\\s+a|Entrega\\s+a)\\s*:\\s*${escapedPerson}`, 'gi'),
+      new RegExp(`(?:Asignad[oa]\\s+a)\\s+${escapedPerson}`, 'gi'),
+      new RegExp(`\\b${escapedPerson}\\b`, 'gi')
+    ];
+
+    for (const cp of cleanPatterns) {
+      cleanReason = cleanReason.replace(cp, '');
+    }
+
+    cleanReason = cleanReason
+      .replace(/^[,\.\-:\s|•]+/, '')
+      .replace(/[,\.\-:\s|•]+$/, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  return {
+    assignedPerson,
+    cleanReason
+  };
+}
+

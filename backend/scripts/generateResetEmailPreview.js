@@ -1,0 +1,139 @@
+import fs from 'fs';
+import path from 'path';
+
+function buildPasswordResetEmailHtml(params) {
+  const expireMinutes = params.expiresInMinutes || 60;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Recuperación de Contraseña - ITAM ChileAtiende</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #F1F5F9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F1F5F9; padding: 24px 12px;">
+        <tr>
+          <td align="center">
+            <table width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; width: 100%; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #CBD5E1;">
+              
+              <!-- Franja Bicromática Gobierno de Chile -->
+              <tr>
+                <td>
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="height: 6px;">
+                    <tr>
+                      <td width="35%" style="background-color: #E4002B; height: 6px;"></td>
+                      <td width="65%" style="background-color: #003B70; height: 6px;"></td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Cabecera Institucional -->
+              <tr>
+                <td style="padding: 24px 28px 18px 28px; background-color: #002B52; color: #FFFFFF;">
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                      <td>
+                        <div style="font-size: 11px; font-weight: 700; color: #38BDF8; letter-spacing: 0.5px; text-transform: uppercase;">
+                          ChileAtiende • Instituto de Previsión Social (IPS)
+                        </div>
+                        <div style="font-size: 18px; font-weight: 900; color: #FFFFFF; margin-top: 4px; line-height: 1.3;">
+                          División de Tecnologías de Información (DTI)
+                        </div>
+                        <div style="font-size: 12px; color: #E2E8F0; margin-top: 2px;">
+                          Sistema de Gestión y Control de Activos TI (ITAM)
+                        </div>
+                      </td>
+                      <td align="right" style="vertical-align: top;">
+                        <div style="display: inline-block; background-color: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 6px 12px; text-align: right;">
+                          <div style="font-size: 10px; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Seguridad</div>
+                          <div style="font-size: 13px; font-weight: 900; color: #38BDF8;">Recuperación Clave</div>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Cuerpo del Mensaje -->
+              <tr>
+                <td style="padding: 28px 28px 20px 28px;">
+                  <div style="font-size: 16px; font-weight: 800; color: #003B70; margin-bottom: 12px;">
+                    Estimado(a) ${params.recipientName}:
+                  </div>
+
+                  <p style="font-size: 13.5px; line-height: 1.6; color: #334155; margin: 0 0 16px 0;">
+                    Hemos recibido una solicitud para restablecer la contraseña de acceso a la plataforma <strong>ITAM ChileAtiende</strong> vinculada a su cuenta de usuario.
+                  </p>
+
+                  <p style="font-size: 13.5px; line-height: 1.6; color: #334155; margin: 0 0 24px 0;">
+                    Para definir su nueva contraseña, por favor presione el siguiente botón oficial de acceso seguro:
+                  </p>
+
+                  <!-- Botón de Acción Principal -->
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                    <tr>
+                      <td align="center">
+                        <a href="${params.resetUrl}" target="_blank" rel="noopener noreferrer" style="background-color: #003B70; background: linear-gradient(135deg, #003B70 0%, #0055A5 100%); color: #FFFFFF; font-size: 14px; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 10px rgba(0, 59, 112, 0.25); text-transform: uppercase; letter-spacing: 0.5px;">
+                          Restablecer Mi Contraseña &rarr;
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Caja de Enlace Directo Alternativo -->
+                  <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 12px; color: #64748B;">
+                    <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">¿Problemas con el botón?</div>
+                    <div style="margin-bottom: 6px;">Copie y pegue directamente el siguiente enlace en la barra de su navegador:</div>
+                    <a href="${params.resetUrl}" style="color: #0284C7; word-break: break-all; text-decoration: underline; font-family: monospace; font-size: 11px;">
+                      ${params.resetUrl}
+                    </a>
+                  </div>
+
+                  <!-- Alerta de Seguridad y Expiración -->
+                  <div style="background-color: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #92400E; line-height: 1.5;">
+                    <strong>⚠️ Aviso de Seguridad:</strong> Este enlace es de un solo uso y expirará automáticamente en <strong>${expireMinutes} minutos</strong>. Si usted no solicitó este cambio de clave, desestime este correo. Su contraseña actual continuará siendo válida y segura.
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Pie de Página Institucional -->
+              <tr>
+                <td style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 16px 28px; text-align: center;">
+                  <div style="font-size: 11.5px; color: #64748B; line-height: 1.5;">
+                    <strong>Instituto de Previsión Social (IPS) • Gobierno de Chile</strong><br>
+                    Mesa de Ayuda DTI • Anexo <strong>8700</strong> • soporteti@chileatiende.cl<br>
+                    <span style="font-size: 10.5px; color: #94A3B8;">Este es un mensaje automático generado por el Sistema ITAM. Por favor no responda directamente a este correo.</span>
+                  </div>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+const html = buildPasswordResetEmailHtml({
+  recipientName: 'Patricio Alejandro Silva Morales',
+  recipientEmail: 'patricio.silva@chileatiende.cl',
+  resetUrl: 'http://localhost:4000/?token=demo-token-4fcf456ec6549e7e6166932a8c8c3e6e',
+  expiresInMinutes: 60
+});
+
+const publicPath = path.resolve('../frontend/public/preview-email-recuperacion.html');
+const distPath = path.resolve('../frontend/dist/preview-email-recuperacion.html');
+
+fs.writeFileSync(publicPath, html);
+if (fs.existsSync(path.resolve('../frontend/dist'))) {
+  fs.writeFileSync(distPath, html);
+}
+
+console.log('Vista previa del correo de recuperación guardada en:');
+console.log(' - ' + publicPath);
+console.log(' - ' + distPath);

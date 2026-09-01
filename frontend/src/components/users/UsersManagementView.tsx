@@ -24,6 +24,7 @@ import { Modal } from '../common/Modal';
 import { SearchableSelect } from '../common/SearchableSelect';
 import { formatDate, validateRut, formatRut, validateEmail, normalizeText } from '../../utils/formatters';
 import { ApiClient } from '../../api/client';
+import { storage } from '../../db/storage';
 
 export const UsersManagementView: React.FC = () => {
   const [users, setUsers] = useState<PlatformUser[]>([]);
@@ -61,15 +62,15 @@ export const UsersManagementView: React.FC = () => {
   const [rutError, setRutError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
 
+  const [isSearchingAd, setIsSearchingAd] = useState<boolean>(false);
+
   const loadData = async () => {
-    const [u, b, d] = await Promise.all([
+    const [u, b] = await Promise.all([
       ApiClient.getPlatformUsers(),
-      ApiClient.getBranches(),
-      ApiClient.searchDirectoryUsers()
+      ApiClient.getBranches()
     ]);
     setUsers(u);
     setBranches(b);
-    setDirectoryUsers(d);
     if (b.length > 0 && formBranchIds.length === 0) {
       setFormBranchIds([b[0].id]);
     }
@@ -79,6 +80,33 @@ export const UsersManagementView: React.FC = () => {
     loadData();
   }, []);
 
+  // Búsqueda en vivo de funcionarios en Active Directory (CHA & IPS)
+  useEffect(() => {
+    if (!adSearchQuery || adSearchQuery.trim().length < 2) {
+      setDirectoryUsers([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingAd(true);
+      try {
+        const results = await ApiClient.searchDirectoryUsers(adSearchQuery.trim());
+        setDirectoryUsers(results.slice(0, 15));
+      } catch {
+        setDirectoryUsers([]);
+      } finally {
+        setIsSearchingAd(false);
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [adSearchQuery]);
+
+  const generateFormPassword = () => {
+    const num = Math.floor(1000 + Math.random() * 9000);
+    setFormPassword(`Itam.${num}!`);
+  };
+
   const handleOpenCreateModal = () => {
     setAdSearchQuery('');
     setIsAdLinked(true);
@@ -86,7 +114,7 @@ export const UsersManagementView: React.FC = () => {
     setFormUsername('');
     setFormFullName('');
     setFormEmail('');
-    setFormPassword('AD_AUTHENTICATED');
+    setFormPassword('Ips.2026!');
     setFormRole('TECNICO_SOPORTE');
     setFormJobTitle('Técnico Soporte TI');
     setFormDepartment('División Tecnologías de la Información');
@@ -104,7 +132,7 @@ export const UsersManagementView: React.FC = () => {
     setFormEmail(adUser.email);
     setFormJobTitle(adUser.jobTitle || 'Funcionario ITAM');
     setFormDepartment(adUser.department || 'ChileAtiende / IPS');
-    setFormPassword('AD_AUTHENTICATED');
+    setFormPassword('Ips.2026!');
     setIsAdLinked(true);
     setAdSearchQuery('');
     setRutError(null);
@@ -158,8 +186,8 @@ export const UsersManagementView: React.FC = () => {
       return;
     }
 
-    if (!isAdLinked && (!formPassword.trim() || formPassword.trim().length < 6)) {
-      setErrorMsg('Para cuentas locales, la contraseña inicial debe tener al menos 6 caracteres.');
+    if (!formPassword.trim() || formPassword.trim() === 'AD_AUTHENTICATED' || formPassword.trim().length < 4) {
+      setErrorMsg('Debe asignar una contraseña personalizada de al menos 4 caracteres para el funcionario.');
       return;
     }
 
@@ -174,7 +202,7 @@ export const UsersManagementView: React.FC = () => {
         username: formUsername.trim().toLowerCase(),
         fullName: formFullName.trim(),
         email: formEmail.trim().toLowerCase(),
-        password: isAdLinked ? 'AD_AUTHENTICATED' : formPassword.trim(),
+        password: formPassword.trim(),
         role: formRole,
         jobTitle: formJobTitle.trim() || 'Funcionario ITAM',
         department: formDepartment.trim() || 'División Tecnologías de la Información',
@@ -183,7 +211,7 @@ export const UsersManagementView: React.FC = () => {
       });
 
       setIsCreateModalOpen(false);
-      setFeedbackMsg(`✓ Funcionario ${formFullName} autorizado exitosamente con rol ${formRole} (${formBranchIds.length} bodegas asignadas).`);
+      setFeedbackMsg(`✓ Funcionario ${formFullName} autorizado y activado exitosamente con clave personalizada (Rol: ${formRole}).`);
       loadData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al registrar o autorizar el usuario.');
@@ -254,8 +282,25 @@ export const UsersManagementView: React.FC = () => {
         assignedBranchIds: formBranchIds
       });
 
+      // Sincronizar inmediatamente la sesión si se editó el propio usuario conectado
+      const currentSessionUser = storage.getCurrentUser();
+      if (currentSessionUser && (currentSessionUser.id === selectedUser.id || currentSessionUser.username === selectedUser.username)) {
+        const syncedUser: PlatformUser = {
+          ...currentSessionUser,
+          fullName: formFullName.trim(),
+          email: formEmail.trim().toLowerCase(),
+          role: formRole,
+          jobTitle: formJobTitle.trim(),
+          department: formDepartment.trim(),
+          branchId: formBranchIds[0],
+          assignedBranchIds: formBranchIds
+        };
+        storage.setCurrentUser(syncedUser);
+      }
+
       setIsEditModalOpen(false);
       setFeedbackMsg(`✓ Datos de ${formFullName} actualizados correctamente.`);
+      window.dispatchEvent(new Event('itam_storage_updated'));
       loadData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al actualizar usuario.');
@@ -316,15 +361,15 @@ export const UsersManagementView: React.FC = () => {
   const getRoleBadge = (role: PlatformRole) => {
     switch (role) {
       case 'ADMIN_TI':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white border border-transparent dark:border-[#38BDF8]/40 shadow-xs">ADMIN DTI</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 text-xs font-bold rounded-md bg-[#003B70] dark:bg-gradient-to-r dark:from-[#003B70] dark:to-[#0055A5] text-white border border-transparent dark:border-[#38BDF8]/40 shadow-xs">ADMIN DTI</span>;
       case 'ENCARGADO_BODEGA':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-blue-50 dark:bg-[#0C2447] text-blue-800 dark:text-[#60A5FA] border border-blue-200 dark:border-[#1E4B8A]">JEFE DE BODEGA</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 text-xs font-bold rounded-md bg-blue-50 dark:bg-[#0C2447] text-blue-800 dark:text-[#60A5FA] border border-blue-200 dark:border-[#1E4B8A]">JEFE DE BODEGA</span>;
       case 'TECNICO_SOPORTE':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60">TÉCNICO SOPORTE</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60">TÉCNICO SOPORTE</span>;
       case 'AUDITOR_CONSULTOR':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-purple-50 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700/60">AUDITOR / CGR</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 text-xs font-bold rounded-md bg-purple-50 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700/60">AUDITOR / CGR</span>;
       default:
-        return <span className="px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">{role}</span>;
+        return <span className="inline-flex items-center justify-center whitespace-nowrap px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">{role}</span>;
     }
   };
 
@@ -416,13 +461,13 @@ export const UsersManagementView: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-[#003B70] dark:bg-gradient-to-r dark:from-[#002D57] dark:to-[#003B70] text-white select-none border-b border-slate-200 dark:border-[#1E3352]">
               <tr>
-                <th className="px-3.5 py-3 font-bold">Usuario / RUT</th>
+                <th className="px-3.5 py-3 font-bold whitespace-nowrap">Usuario / RUT</th>
                 <th className="px-3.5 py-3 font-bold">Nombre Completo</th>
-                <th className="px-3.5 py-3 font-bold">Rol & Privilegios</th>
+                <th className="px-3.5 py-3 font-bold whitespace-nowrap">Rol & Privilegios</th>
                 <th className="px-3.5 py-3 font-bold">Sucursal Asignada</th>
                 <th className="px-3.5 py-3 font-bold">Contacto / Correo</th>
-                <th className="px-3.5 py-3 font-bold">Estado Cuenta</th>
-                <th className="px-3.5 py-3 text-right font-bold">Acciones</th>
+                <th className="px-3.5 py-3 font-bold whitespace-nowrap">Estado Cuenta</th>
+                <th className="px-3.5 py-3 text-right font-bold whitespace-nowrap">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-[#1E3352]/50 bg-white dark:bg-[#101C30] text-slate-700 dark:text-slate-300">
@@ -436,7 +481,7 @@ export const UsersManagementView: React.FC = () => {
                 filteredUsers.map(user => (
                   <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-[#162744] transition-colors">
                     {/* Usuario & RUT */}
-                    <td className="px-3.5 py-3 font-mono">
+                    <td className="px-3.5 py-3 font-mono whitespace-nowrap">
                       <div className="font-bold text-slate-900 dark:text-white">{user.username}</div>
                       <div className="text-[11px] text-[#003B70] dark:text-[#38BDF8] font-semibold">{user.rut}</div>
                     </td>
@@ -448,7 +493,7 @@ export const UsersManagementView: React.FC = () => {
                     </td>
 
                     {/* Rol */}
-                    <td className="px-3.5 py-3">
+                    <td className="px-3.5 py-3 whitespace-nowrap">
                       {getRoleBadge(user.role)}
                     </td>
 
@@ -457,23 +502,23 @@ export const UsersManagementView: React.FC = () => {
                       <div className="space-y-1">
                         {user.assignedBranchNames && user.assignedBranchNames.length > 0 ? (
                           user.assignedBranchNames.length === 1 ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
                               <Building2 className="w-3.5 h-3.5 text-[#003B70]" />
                               <span className="font-semibold">{user.assignedBranchNames[0]}</span>
                             </div>
                           ) : (
                             <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-1.5 font-bold text-[#003B70]">
+                              <div className="flex items-center gap-1.5 font-bold text-[#003B70] whitespace-nowrap">
                                 <Building2 className="w-3.5 h-3.5 text-[#003B70]" />
                                 <span>{user.assignedBranchNames[0]}</span>
                               </div>
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200 w-fit" title={user.assignedBranchNames.join(', ')}>
+                              <span className="inline-flex items-center whitespace-nowrap px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200 w-fit" title={user.assignedBranchNames.join(', ')}>
                                 +{user.assignedBranchNames.length - 1} bodegas adicionales
                               </span>
                             </div>
                           )
                         ) : (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 whitespace-nowrap">
                             <Building2 className="w-3.5 h-3.5 text-[#003B70]" />
                             <span>{user.branchName || 'Sucursal Central'}</span>
                           </div>
@@ -490,20 +535,20 @@ export const UsersManagementView: React.FC = () => {
                     </td>
 
                     {/* Estado */}
-                    <td className="px-3.5 py-3">
+                    <td className="px-3.5 py-3 whitespace-nowrap">
                       {user.isActive ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0]">
+                        <span className="inline-flex items-center justify-center whitespace-nowrap gap-1 px-2 py-0.5 rounded bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0]">
                           <CheckCircle2 className="w-3 h-3" /> Activo
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#FEF2F2] text-[#991B1B] font-bold border border-[#FECACA]">
+                        <span className="inline-flex items-center justify-center whitespace-nowrap gap-1 px-2 py-0.5 rounded bg-[#FEF2F2] text-[#991B1B] font-bold border border-[#FECACA]">
                           <XCircle className="w-3 h-3" /> Desactivado
                         </span>
                       )}
                     </td>
 
                     {/* Acciones */}
-                    <td className="px-3.5 py-3 text-right">
+                    <td className="px-3.5 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleOpenEditModal(user)}
@@ -588,15 +633,14 @@ export const UsersManagementView: React.FC = () => {
 
               {/* Resultados desplegables si hay búsqueda */}
               {adSearchQuery.trim().length >= 2 && (
-                <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 bg-white rounded-lg border border-slate-200 shadow-sm mt-1">
-                  {directoryUsers
-                    .filter(u => {
-                      const target = normalizeText(`${u.fullName} ${u.rut || ''} ${u.samAccountName} ${u.email} ${u.department || ''}`);
-                      const words = normalizeText(adSearchQuery).split(/\s+/).filter(Boolean);
-                      return words.every(w => target.includes(w));
-                    })
-                    .slice(0, 8)
-                    .map(adUser => (
+                <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white rounded-lg border border-slate-200 shadow-md mt-1">
+                  {isSearchingAd ? (
+                    <div className="p-3 text-center text-slate-500 flex items-center justify-center gap-2">
+                      <span className="animate-spin text-xs">⏳</span>
+                      <span>Buscando en directorios CHA & IPS...</span>
+                    </div>
+                  ) : directoryUsers.length > 0 ? (
+                    directoryUsers.map(adUser => (
                       <button
                         type="button"
                         key={adUser.id || adUser.samAccountName}
@@ -608,31 +652,40 @@ export const UsersManagementView: React.FC = () => {
                           <div className="text-[11px] text-slate-500 font-mono">
                             {adUser.samAccountName} • {adUser.rut || 'Sin RUT'} • {adUser.email}
                           </div>
+                          <div className="text-[10px] text-slate-400">
+                            {adUser.department || (adUser.email?.includes('ips.gob.cl') ? 'IPS' : 'ChileAtiende')}
+                          </div>
                         </div>
                         <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
                           Seleccionar
                         </span>
                       </button>
-                    ))}
+                    ))
+                  ) : (
+                    <div className="p-3 text-center space-y-2">
+                      <p className="text-slate-500 text-[11px]">No se encontraron coincidencias directas para "{adSearchQuery}".</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cleanQuery = adSearchQuery.trim().toLowerCase();
+                          setFormUsername(cleanQuery);
+                          setFormEmail(`${cleanQuery}@ips.gob.cl`);
+                          setFormDepartment('Instituto de Previsión Social (IPS)');
+                          setFormJobTitle('Funcionario IPS');
+                          setIsAdLinked(true);
+                          setAdSearchQuery('');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 hover:bg-emerald-100 text-xs inline-flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Autocompletar como Funcionario IPS (@ips.gob.cl)</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {isAdLinked && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-emerald-800 text-xs">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Funcionario vinculado a <strong>Active Directory</strong>. La contraseña se valida en red.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAdLinked(false)}
-                  className="text-emerald-700 underline text-[11px] font-semibold hover:text-emerald-900"
-                >
-                  Cambiar a cuenta local
-                </button>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -693,30 +746,35 @@ export const UsersManagementView: React.FC = () => {
                 {emailError && <p className="text-[11px] text-red-600 mt-1">{emailError}</p>}
               </div>
 
-              {!isAdLinked ? (
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Contraseña Local Inicial (mínimo 6 car.) *</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={formPassword}
-                      onChange={(e) => setFormPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres..."
-                      className="gov-input gov-input-with-icon font-mono"
-                      required
-                    />
-                  </div>
+              <div className="sm:col-span-2 p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-slate-800 font-bold text-xs">
+                    Contraseña Personalizada de Acceso *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={generateFormPassword}
+                    className="text-[11px] font-bold text-[#003B70] hover:underline flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Generar Clave Aleatoria</span>
+                  </button>
                 </div>
-              ) : (
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Método de Autenticación</label>
-                  <div className="p-2.5 rounded-lg bg-slate-100 text-slate-700 font-medium flex items-center gap-2 border border-slate-200">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Contraseña Active Directory institucional</span>
-                  </div>
+                <div className="relative">
+                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={formPassword}
+                    onChange={(e) => setFormPassword(e.target.value)}
+                    placeholder="Ingrese la contraseña asignada (mínimo 4 caracteres)..."
+                    className="gov-input gov-input-with-icon font-mono font-medium text-xs"
+                    required
+                  />
                 </div>
-              )}
+                <p className="text-[10px] text-slate-500 font-medium">
+                  El mantenedor asigna esta clave para que el funcionario inicie sesión con control total de acceso.
+                </p>
+              </div>
 
               <div>
                 <label className="block text-slate-700 font-bold mb-1">Rol y Privilegios en el Sistema *</label>

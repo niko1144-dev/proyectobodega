@@ -133,11 +133,9 @@ export class ExcelService {
         seenSerialsInBatch.add(serialNumber.toUpperCase());
       }
 
-      if (propertyType === 'PROPIO') {
-        if (!inventoryNumber) {
-          errors.push('Para Activos Propios de ChileAtiende, el N° de Inventario es obligatorio.');
-        } else if (existingInventoryNumbers.has(inventoryNumber.toUpperCase())) {
-          errors.push(`El N° de Inventario '${inventoryNumber}' ya está en uso.`);
+      if (inventoryNumber) {
+        if (existingInventoryNumbers.has(inventoryNumber.toUpperCase())) {
+          errors.push(`El N° de Inventario '${inventoryNumber}' ya está en uso en el inventario.`);
         } else if (seenInvInBatch.has(inventoryNumber.toUpperCase())) {
           errors.push(`El N° de Inventario '${inventoryNumber}' está duplicado en este archivo.`);
         } else {

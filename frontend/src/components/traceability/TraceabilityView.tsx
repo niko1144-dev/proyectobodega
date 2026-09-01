@@ -11,6 +11,7 @@ import {
   Cpu,
   HardDrive,
   User,
+  UserCheck,
   Building2,
   Calendar,
   FileText,
@@ -36,7 +37,7 @@ import {
 import { ApiClient } from '../../api/client';
 import { Asset, AssetTraceabilityResponse, TimelineEvent, AssetAuditLog } from '../../types/asset';
 import { Branch } from '../../types/document';
-import { formatDate, formatDateTime, normalizeText } from '../../utils/formatters';
+import { formatDate, formatDateTime, normalizeText, extractAssignedPersonAndCleanReason } from '../../utils/formatters';
 import { PropertyBadge, AssignmentStatusBadge } from '../common/Badge';
 import { PDFService } from '../../services/pdfService';
 
@@ -438,9 +439,13 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
             </div>
 
             {/* Timeline Nodos */}
-            <div className="relative pl-6 sm:pl-8 space-y-6 before:absolute before:left-3 sm:before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+            <div className="relative pl-6 sm:pl-8 space-y-6 before:absolute before:left-3 sm:before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
               {selectedAssetTrace.timeline.map((event, idx) => {
                 const badge = getTimelineEventBadge(event.category);
+                const rawReason = event.details?.changeReason || event.details?.observations || '';
+                const explicitAssigned = event.assignedTo || event.details?.recipientName || event.details?.newUserName || event.details?.assignedTo;
+                const { assignedPerson, cleanReason } = extractAssignedPersonAndCleanReason(rawReason, explicitAssigned);
+
                 return (
                   <div key={event.id} className="relative group">
                     {/* Icono del Nodo */}
@@ -449,59 +454,89 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
                     </div>
 
                     {/* Tarjeta del Evento */}
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#003B70]/30 transition-all space-y-2">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-[#003B70]/30 transition-all space-y-2.5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900">{event.title}</h4>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{event.title}</h4>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${badge.bg}`}>
                             {event.category}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
                           <span>{formatDateTime(event.timestamp)}</span>
                         </div>
                       </div>
 
-                      {/* Detalles del Evento */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs pt-1 border-t border-slate-200/60">
+                      {/* Detalles del Evento en Cuadrícula Estructurada */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs pt-1.5 border-t border-slate-200/60 dark:border-slate-800">
                         <div>
-                          <span className="text-slate-400 block text-[10px] uppercase">Sucursal / Bodega:</span>
-                          <strong className="text-slate-800">{event.branchName}</strong>
+                          <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Sucursal / Bodega:</span>
+                          <strong className="text-slate-800 dark:text-slate-200">{event.branchName}</strong>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px] uppercase">Responsable / Técnico:</span>
-                          <strong className="text-slate-800">{event.actor}</strong>
+                          <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Responsable / Técnico:</span>
+                          <strong className="text-slate-800 dark:text-slate-200">{event.actor}</strong>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px] uppercase">Documento Referencia:</span>
-                          <strong className="text-[#003B70]">{event.documentRef || 'Sin documento asociado'}</strong>
+                          <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Asignado a:</span>
+                          {assignedPerson ? (
+                            <div className="flex items-center gap-1 text-emerald-800 dark:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/40 w-fit max-w-full">
+                              <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span className="truncate" title={assignedPerson}>{assignedPerson}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">No aplica / Sin asignar</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Documento Referencia:</span>
+                          <strong className="text-[#003B70] dark:text-[#38BDF8]">{event.documentRef || 'Sin documento'}</strong>
                         </div>
                       </div>
 
-                      {/* Metadatos Específicos */}
-                      {event.details?.recipientName && (
-                        <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-xs flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <span>Funcionario Receptor: <strong className="text-slate-900">{event.details.recipientName} ({event.details.recipientRut})</strong></span>
-                          {event.details.recipientJobTitle && <span>Cargo: <strong className="text-slate-700">{event.details.recipientJobTitle}</strong></span>}
-                          {event.details.recipientDepartment && <span>Depto: <strong className="text-slate-700">{event.details.recipientDepartment}</strong></span>}
-                          {event.details.signatureStatus && (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                              {event.details.signatureStatus}
-                            </span>
-                          )}
+                      {/* Ficha Destacada de Funcionario Asignado (si aplica) */}
+                      {assignedPerson && (
+                        <div className="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-800/40 text-xs flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold">
+                              <UserCheck className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block leading-tight">
+                                Funcionario Receptor / Asignado a:
+                              </span>
+                              <strong className="text-slate-900 dark:text-white text-xs sm:text-sm">
+                                {assignedPerson}
+                                {event.details?.recipientRut ? ` (RUT: ${event.details.recipientRut})` : ''}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {event.details?.recipientJobTitle && (
+                              <span className="text-[11px] px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                Cargo: <strong>{event.details.recipientJobTitle}</strong>
+                              </span>
+                            )}
+                            {event.details?.recipientDepartment && (
+                              <span className="text-[11px] px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                Depto: <strong>{event.details.recipientDepartment}</strong>
+                              </span>
+                            )}
+                            {event.details?.signatureStatus && (
+                              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-700">
+                                {event.details.signatureStatus === 'FIRMADA' ? '✓ Acta Firmada Digitalmente' : event.details.signatureStatus}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
 
-                      {event.details?.changeReason && (
-                        <p className="text-xs text-slate-600 italic">
-                          "{event.details.changeReason}"
-                        </p>
-                      )}
-
-                      {event.details?.observations && !event.details.changeReason && (
-                        <p className="text-xs text-slate-600">
-                          Obs: {event.details.observations}
+                      {/* Motivo de Auditoría o Observaciones Limpias */}
+                      {cleanReason && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 italic bg-white/70 dark:bg-slate-800/40 p-2 rounded border border-slate-200/50 dark:border-slate-700/50">
+                          <strong>Motivo / Comentario:</strong> "{cleanReason}"
                         </p>
                       )}
                     </div>
@@ -519,13 +554,13 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
           {/* Filtros del Kardex */}
           <div className="gov-card p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex-1 w-full sm:w-auto relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 value={kardexSearch}
                 onChange={(e) => setKardexSearch(e.target.value)}
                 placeholder="Filtrar movimientos por Serie, N° Inventario, Responsable o Motivo..."
-                className="gov-input pl-9 text-xs"
+                className="gov-input gov-input-with-icon text-xs"
               />
             </div>
 
@@ -546,8 +581,8 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
 
           {/* Tabla Kardex Global */}
           <div className="gov-card overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Registro Histórico y Kardex de Auditoría ({filteredAuditLogs.length} eventos)
               </h3>
               <span className="text-xs text-slate-500">Trazabilidad en tiempo real</span>
@@ -563,6 +598,7 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
                     <th>Sucursal</th>
                     <th>Estado Resultante</th>
                     <th>Responsable</th>
+                    <th>Asignado a</th>
                     <th>Motivo / Movimiento</th>
                     <th className="text-right">Acción</th>
                   </tr>
@@ -570,18 +606,18 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
                 <tbody>
                   {filteredAuditLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-8 text-slate-500 text-xs">
+                      <td colSpan={9} className="text-center py-8 text-slate-500 text-xs">
                         No se encontraron registros de auditoría con los filtros seleccionados.
                       </td>
                     </tr>
                   ) : (
                     filteredAuditLogs.map(log => (
-                      <tr key={log.id} className="hover:bg-slate-50">
-                        <td className="font-mono text-[11px] text-slate-600 whitespace-nowrap">
+                      <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td className="font-mono text-[11px] text-slate-600 dark:text-slate-400 whitespace-nowrap">
                           {formatDateTime(log.timestamp)}
                         </td>
                         <td>
-                          <div className="font-mono font-bold text-[#003B70] text-xs">
+                          <div className="font-mono font-bold text-[#003B70] dark:text-[#38BDF8] text-xs">
                             {log.serialNumber}
                           </div>
                           {log.inventoryNumber && (
@@ -590,22 +626,38 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
                             </div>
                           )}
                         </td>
-                        <td className="text-xs font-medium text-slate-800">
+                        <td className="text-xs font-medium text-slate-800 dark:text-slate-200">
                           {log.asset ? `${log.asset.brand} ${log.asset.model}` : 'Activo TI'}
                         </td>
-                        <td className="text-xs text-slate-600">
+                        <td className="text-xs text-slate-600 dark:text-slate-400">
                           {log.branchName}
                         </td>
                         <td>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-blue-50 text-[#003B70] border border-blue-200">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-blue-50 dark:bg-blue-950/50 text-[#003B70] dark:text-[#38BDF8] border border-blue-200 dark:border-blue-800">
                             {log.newStatus.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="text-xs text-slate-700">
+                        <td className="text-xs text-slate-700 dark:text-slate-300">
                           {log.changedByUserName}
                         </td>
-                        <td className="text-xs text-slate-600 max-w-xs truncate" title={log.changeReason}>
-                          {log.changeReason}
+                        <td className="text-xs">
+                          {(() => {
+                            const parsed = extractAssignedPersonAndCleanReason(log.changeReason, log.newUserName);
+                            return parsed.assignedPerson ? (
+                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 font-semibold text-[11px]">
+                                <UserCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                <span className="truncate max-w-[130px]" title={parsed.assignedPerson}>{parsed.assignedPerson}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic">-</span>
+                            );
+                          })()}
+                        </td>
+                        <td className="text-xs text-slate-600 dark:text-slate-400 max-w-xs truncate" title={log.changeReason}>
+                          {(() => {
+                            const parsed = extractAssignedPersonAndCleanReason(log.changeReason, log.newUserName);
+                            return parsed.cleanReason || (parsed.assignedPerson ? 'Asignación a funcionario' : log.changeReason);
+                          })()}
                         </td>
                         <td className="text-right">
                           <button
@@ -614,7 +666,7 @@ export const TraceabilityView: React.FC<TraceabilityViewProps> = ({ currentBranc
                               loadAssetTrace(log.serialNumber);
                               setActiveSubTab('LIFECYCLE');
                             }}
-                            className="text-xs font-bold text-[#003B70] hover:underline flex items-center justify-end gap-1 ml-auto"
+                            className="text-xs font-bold text-[#003B70] dark:text-[#38BDF8] hover:underline flex items-center justify-end gap-1 ml-auto"
                           >
                             <span>Ver Hoja de Vida</span>
                             <ChevronRight className="w-3.5 h-3.5" />

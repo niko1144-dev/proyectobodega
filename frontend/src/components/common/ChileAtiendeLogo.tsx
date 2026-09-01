@@ -1,5 +1,6 @@
 import React from 'react';
-import logoPng from '../../assets/ips-chileatiende-logo.png';
+import logoLight from '../../assets/ips-chileatiende-logo-light.png';
+import logoDark from '../../assets/ips-chileatiende-logo-dark.png';
 
 interface ChileAtiendeLogoProps {
   className?: string;
@@ -11,22 +12,32 @@ export const ChileAtiendeLogo: React.FC<ChileAtiendeLogoProps> = ({
   className = '',
   size = 'md'
 }) => {
-  // Dimensiones ampliadas y generosas para alta visibilidad y nitidez en paneles
   const sizeClasses = {
-    sm: 'h-9 sm:h-10 w-auto',
-    md: 'h-11 sm:h-12 w-auto',
+    sm: 'h-8 sm:h-9 w-auto',
+    md: 'h-10 sm:h-12 w-auto',
     lg: 'h-16 sm:h-18 w-auto',
-    xl: 'h-24 sm:h-28 w-auto',
-    '2xl': 'h-28 sm:h-32 w-auto',
-    panel: 'h-24 sm:h-28 max-w-[340px] w-full'
+    xl: 'h-22 sm:h-26 w-auto',
+    '2xl': 'h-26 sm:h-30 w-auto',
+    panel: 'h-24 sm:h-28 max-w-[350px] w-full'
   };
 
   return (
-    <img
-      src={logoPng || '/img/ips-chileatiende-logo.png'}
-      alt="Logo Oficial IPS ChileAtiende - Instituto de Previsión Social"
-      className={`object-contain select-none shrink-0 transition-all ${sizeClasses[size]} ${className}`}
-      draggable={false}
-    />
+    <div className={`relative inline-flex items-center justify-center select-none shrink-0 ${sizeClasses[size]} ${className}`}>
+      {/* Logo Modo Día (Light) */}
+      <img
+        src={logoLight || '/img/ips-chileatiende-logo-light.png'}
+        alt="Logo Oficial IPS ChileAtiende - Modo Día"
+        className="w-full h-full object-contain dark:hidden transition-all duration-200"
+        draggable={false}
+      />
+
+      {/* Logo Modo Noche (Dark) */}
+      <img
+        src={logoDark || '/img/ips-chileatiende-logo-dark.png'}
+        alt="Logo Oficial IPS ChileAtiende - Modo Noche"
+        className="w-full h-full object-contain hidden dark:block transition-all duration-200"
+        draggable={false}
+      />
+    </div>
   );
 };

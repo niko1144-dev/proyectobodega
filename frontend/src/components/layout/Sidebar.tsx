@@ -217,7 +217,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {item.badge && (
                 <span
-                  className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 transition-transform duration-200 group-hover:scale-110 ${
+                  className={`text-[11px] font-bold whitespace-nowrap px-2 py-0.5 rounded-full shrink-0 ml-2 transition-transform duration-200 group-hover:scale-105 ${
                     item.badgeVariant === 'danger'
                       ? isDark
                         ? 'bg-red-950/80 text-red-300 border border-red-700/60'
@@ -265,7 +265,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar (visible on lg+) */}
-      <aside className={`hidden lg:flex w-64 ${isDark ? 'bg-[#070D1A] border-[#16263F]' : 'bg-white border-slate-200'} border-r flex-col justify-between shrink-0 select-none min-h-[calc(100vh-65px)] shadow-2xs dark:shadow-md transition-colors duration-200`}>
+      <aside className={`hidden lg:flex w-72 ${isDark ? 'bg-[#070D1A] border-[#16263F]' : 'bg-white border-slate-200'} border-r flex-col justify-between shrink-0 select-none min-h-[calc(100vh-65px)] shadow-2xs dark:shadow-md transition-colors duration-200`}>
         {sidebarContent}
       </aside>
 

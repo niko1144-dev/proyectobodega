@@ -112,7 +112,7 @@ receptionRouter.post('/dispatch-guide', async (req: Request, res: Response): Pro
           const asset = await tx.asset.create({
             data: {
               serialNumber: item.serialNumber.trim().toUpperCase(),
-              inventoryNumber: propertyType === 'PROPIO' ? item.inventoryNumber?.trim().toUpperCase() : null,
+              inventoryNumber: item.inventoryNumber?.trim() ? item.inventoryNumber.trim().toUpperCase() : null,
               brand: item.brand.trim(),
               model: item.model.trim(),
               assetTypeId: item.assetTypeId,
